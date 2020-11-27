@@ -1,0 +1,23 @@
+{
+  "slug": "kickbaba",
+  "name": "kickbaba",
+  "version": "1.0.0",
+  "license": "MIT",
+  "brand": "Comfortzone",
+  "author": "hampa",
+  "authorEmail": "hampus@nabistudios.com",
+  "authorUrl": "",
+  "pluginUrl": "",
+  "manualUrl": "",
+  "sourceUrl": "",
+  "donateUrl": "",
+  "changelogUrl": "",
+  "modules": [
+    {
+      "slug": "kickbaba",
+      "name": "kickbaba",
+      "description": "Psytrance kick bass",
+      "tags": []
+    }
+  ]
+}
