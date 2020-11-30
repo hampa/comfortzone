@@ -52,6 +52,7 @@ struct KBVoltageControlledOscillator {
 	float sinBuffer[KB_OVERSAMPLE] = {};
 	float sawBuffer[KB_OVERSAMPLE] = {};
 	float sqrBuffer[KB_OVERSAMPLE] = {};
+	float fmSawBuffer[KB_OVERSAMPLE] = {};
 	float pulseBuffer[KB_OVERSAMPLE] = {};
 	float additiveBuffer[KB_OVERSAMPLE] = {};
 
@@ -80,6 +81,8 @@ struct KBVoltageControlledOscillator {
 		return f;	
 	}
 
+	// sigmode curve
+	// https://www.desmos.com/calculator/aksjkh9das?lang=sv-SE
 	void setPitchQ(float octave, float pitchKnob, float pitchCv, float freqOffset) {
 		// Compute frequency
 		float pitch = 1.0 + roundf(octave);
@@ -189,6 +192,40 @@ struct KBVoltageControlledOscillator {
 		}
 	}
 
+	float previousSample = 1;
+	float bufferSample1 = 0.f;
+	float bufferSample2 = 0.f;
+	float feedbackSample = 0.f;
+
+	void processFmSaw(float deltaTime, float feedbackAmount, float fmMod) {
+		float deltaPhase = CLAMP(freq * deltaTime, 1e-6, 0.5f);
+
+		//phase += freq * time + fmMod;
+
+		for (int i = 0; i < KB_OVERSAMPLE; i++) {
+			float sine = std::sin(2.f * M_PI * phase + feedbackAmount * feedbackSample);
+			fmSawBuffer[i] = sine; 
+			bufferSample1 = sine;
+			bufferSample2 = bufferSample1; 
+			feedbackSample = (bufferSample1 + bufferSample2) / 2.0f;
+
+			phase += deltaPhase / KB_OVERSAMPLE;
+			phase += fmMod / KB_OVERSAMPLE;
+			phase = kbEucMod(phase, 1.0f);
+		}
+	}
+
+	void processLerp(float deltaTime, float amount) {
+		float deltaPhase = CLAMP(freq * deltaTime, 1e-6, 0.5f);
+		for (int i = 0; i < KB_OVERSAMPLE; i++) {
+			float sine = std::cos(2.0f * M_PI * phase);
+			float saw = lerp(1.0f, -1.0f, phase); 
+			fmSawBuffer[i] = lerp(sine, saw, amount * amount);
+			phase += deltaPhase / KB_OVERSAMPLE;
+			phase = kbEucMod(phase, 1.0f);
+		}
+	}
+
 	void processPulse(float deltaTime) {
 		float deltaPhase = CLAMP(freq * deltaTime, 1e-6, 0.5f);
 		for (int i = 0; i < KB_OVERSAMPLE; i++) {
@@ -268,6 +305,11 @@ struct KBVoltageControlledOscillator {
 		return sawBuffer[0];
 		//return sawDecimator.process(sawBuffer);
 	}
+
+	float fmSaw() {
+		return fmSawBuffer[0];	
+	}
+	
 	float sqr() {
 		return sqrBuffer[0];
 		//return sqrDecimator.process(sqrBuffer);
@@ -627,10 +669,15 @@ struct KickBass {
 				//out = oscillator2.additive() * 5.0f * bassVel;
 			}
 			else {
-				oscillator2.processSaw(sample_time);
-				input = oscillator2.saw();
-				bq_update(bq, LOWPASS, logfreq, filterQ, 1.0, sample_rate);
-				out = bq_process(bq, input) * 5.0f * bassVel;
+				//float fmMod = filterRes;
+				oscillator2.processFmSaw(sample_time, cutoffPhase, 0);
+				//oscillator2.processLerp(sample_time, cutoffPhase);
+				out = input = oscillator2.fmSaw() * 5.0f * bassVel * cutoffPhase;
+				//
+				//oscillator2.processAdditive(sample_time, cutoffPhase * freq * 32.0f, powf(filterRes, 2));
+				//input = out = oscillator2.additive() * 5.0f * bassVel * cutoffPhase;
+				//bq_update(bq, LOWPASS, logfreq, filterQ, 1.0, sample_rate);
+				//out = bq_process(bq, input) * 5.0f * bassVel;
 			}
 
 			/*

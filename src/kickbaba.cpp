@@ -77,6 +77,8 @@ struct Kickbaba : Module {
 		float sample_time = args.sampleTime;
 		float sample_rate = args.sampleRate;
 
+		//DEBUG("%f %f", sample_rate, sample_time);
+
 		bool rst = resetTrig.process(inputs[RESET_INPUT].getVoltage());
 		bool clk = clockTrig.process(inputs[CLOCK_INPUT].getVoltage());
 		float x1 = params[KICKPITCH_X1_PARAM].getValue();
