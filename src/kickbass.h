@@ -534,6 +534,16 @@ struct KickBass {
 		return lerp(from, to, fraction);
 	}
 
+	// x = 0 to 1
+	// k = -1 to 1.0f
+	float getSigmoid(float x, float k) {
+		x = clamp(x, 0.0f, 1.0f);
+		k = clamp(k, -1.0f, 1.0f);
+		float a = k - x * 2.0f * k + 1.0f;
+		float b = x - x * k; 
+		return b / a; 
+	}
+
 	enum {
 		CLK_OUT,
 		KICK_OUT,
@@ -658,26 +668,29 @@ struct KickBass {
 			}
 			oscillator2.wavetable = wavetable;
 
+			float sigmoidVel = 1.0f - getSigmoid(getBassPhase(), 0.9f); 
 			float input = 0;
 			float out = 0;
 			if (useMorph) {
 				oscillator2.processPulse(sample_time);
 				input = oscillator2.pulse();
 				bq_update(bq, LOWPASS,logfreq, filterQ, 1.0, sample_rate);
-				out = bq_process(bq, input) * 5.0f * bassVel;
+				out = bq_process(bq, input) * 5.0f * bassVel * sigmoidVel;
 				//oscillator2.processAdditive(sample_time, cutoffPhase * freq * 32.0f, powf(filterRes, 2));
 				//out = oscillator2.additive() * 5.0f * bassVel;
 			}
 			else {
 				//float fmMod = filterRes;
-				oscillator2.processFmSaw(sample_time, cutoffPhase, 0);
+				//oscillator2.processFmSaw(sample_time, cutoffPhase, 0);
 				//oscillator2.processLerp(sample_time, cutoffPhase);
-				out = input = oscillator2.fmSaw() * 5.0f * bassVel * cutoffPhase;
+				//out = input = oscillator2.fmSaw() * 5.0f * bassVel * cutoffPhase;
 				//
 				//oscillator2.processAdditive(sample_time, cutoffPhase * freq * 32.0f, powf(filterRes, 2));
+				oscillator2.processSaw(sample_time);
+				input = oscillator2.saw();
 				//input = out = oscillator2.additive() * 5.0f * bassVel * cutoffPhase;
-				//bq_update(bq, LOWPASS, logfreq, filterQ, 1.0, sample_rate);
-				//out = bq_process(bq, input) * 5.0f * bassVel;
+				bq_update(bq, LOWPASS, logfreq, filterQ, 1.0, sample_rate);
+				out = bq_process(bq, input) * 5.0f * bassVel * sigmoidVel;
 			}
 
 			/*
