@@ -1,5 +1,5 @@
 #ifndef KICKBASS_H
-#define KICKBASS_H
+#define KICKBASS_H 1
 
 #include "biquad.h"
 #include <stdlib.h>
@@ -22,15 +22,6 @@ float CLAMP(float x, float upper, float lower)
 */
 
 #define CLAMP(x, low, high)  (((x) > (high)) ? (high) : (((x) < (low)) ? (low) : (x)))
-
-float kbEucMod(float a, float b) {
-	float mod = std::fmod(a, b);
-	//float mod = fmod(a, b);
-	if (mod < 0.f) {
-		mod += b;
-	}
-	return mod;
-}
 
 template <int OVERSAMPLE, int QUALITY>
 struct KBVoltageControlledOscillator {
@@ -82,6 +73,14 @@ struct KBVoltageControlledOscillator {
 	}
 
 	// sigmode curve
+	float kbEucMod(float a, float b) {
+		float mod = fmod(a, b);
+		//float mod = fmod(a, b);
+		if (mod < 0.f) {
+			mod += b;
+		}
+		return mod;
+	}
 	// https://www.desmos.com/calculator/aksjkh9das?lang=sv-SE
 	void setPitchQ(float octave, float pitchKnob, float pitchCv, float freqOffset) {
 		// Compute frequency
@@ -107,13 +106,13 @@ struct KBVoltageControlledOscillator {
 
 	float getChirp(float _phase, float _morph) {
 		float a = lerp(2, 12, _morph);
-		float sin_val = std::sin(powf(_phase, 1.0f / M_PI) * M_PI * a);
+		float sin_val = sinf(powf(_phase, 1.0f / M_PI) * M_PI * a);
 		return sin_val;
 	}
 
 	float getClick(float _phase, float minFreq, float maxFreq, float _morph) {
 		float a = lerp(minFreq, maxFreq, _morph);
-		float sin_val = std::sin(powf(_phase, 1.0f / M_PI) * M_PI * a);
+		float sin_val = sinf(powf(_phase, 1.0f / M_PI) * M_PI * a);
 		return sin_val;
 	}
 
@@ -203,7 +202,7 @@ struct KBVoltageControlledOscillator {
 		//phase += freq * time + fmMod;
 
 		for (int i = 0; i < KB_OVERSAMPLE; i++) {
-			float sine = std::sin(2.f * M_PI * phase + feedbackAmount * feedbackSample);
+			float sine = sinf(2.f * M_PI * phase + feedbackAmount * feedbackSample);
 			fmSawBuffer[i] = sine; 
 			bufferSample1 = sine;
 			bufferSample2 = bufferSample1; 
@@ -218,7 +217,7 @@ struct KBVoltageControlledOscillator {
 	void processLerp(float deltaTime, float amount) {
 		float deltaPhase = CLAMP(freq * deltaTime, 1e-6, 0.5f);
 		for (int i = 0; i < KB_OVERSAMPLE; i++) {
-			float sine = std::cos(2.0f * M_PI * phase);
+			float sine = cosf(2.0f * M_PI * phase);
 			float saw = lerp(1.0f, -1.0f, phase); 
 			fmSawBuffer[i] = lerp(sine, saw, amount * amount);
 			phase += deltaPhase / KB_OVERSAMPLE;
@@ -342,7 +341,7 @@ struct KickBass {
 	KBVoltageControlledOscillator<KB_OVERSAMPLE, 16> oscillator3;
 
 	int ticks;
-	int length = 19600;
+	float length = 19600;
 	int isInitialized = 0;
 	float kickPhaseAtFirstBass;
 	int note4;
@@ -663,7 +662,7 @@ struct KickBass {
 
 			oscillator.setPitchQ(octave, kickVoltageLerp, 0, 0);
 			oscillator.process(sample_time);
-			outputs[KICK_OUT] = 5.f * oscillator.sin() * kickAmp;
+			outputs[KICK_OUT] = oscillator.sin() * kickAmp;
 		}
 		else {
 			oscillator.resetPhase();
@@ -682,17 +681,17 @@ struct KickBass {
 			float filterRes = CLAMP(resParam, 0.f, 1.f);
 			filterQ = powf(filterRes, 2) * 10.0f + 0.01f;
 
-			if (note16 == 1) {	
+			if (note16 == 1) {
 				oscillator2.setPitchQ(bassOctave, bassPitch, bassPitchCV, 0);
 				bassVel = bassVelocity;
 				if (bassTicks == 0) {
 					kickPhaseAtFirstBass = oscillator.lastUsedPhase;
 				}
 			}
-			else if (note16 == 2) {	
+			else if (note16 == 2) {
 				oscillator2.setPitchQ(bassOctave, bassPitch, bassPitchCV, 0);
 			}
-			else if (note16 == 3) {	
+			else if (note16 == 3) {
 				oscillator2.setPitchQ(bassOctave, bassPitch, bassPitchCV, 0);
 			}
 			oscillator2.wavetable = wavetable;
@@ -704,7 +703,7 @@ struct KickBass {
 				oscillator2.processPulse(sample_time);
 				input = oscillator2.pulse();
 				bq_update(bq, LOWPASS,logfreq, filterQ, 1.0, sample_rate);
-				out = bq_process(bq, input) * 5.0f * bassVel * sigmoidVel;
+				out = bq_process(bq, input) * bassVel * sigmoidVel;
 				//oscillator2.processAdditive(sample_time, cutoffPhase * freq * 32.0f, powf(filterRes, 2));
 				//out = oscillator2.additive() * 5.0f * bassVel;
 			}
@@ -719,7 +718,7 @@ struct KickBass {
 				input = oscillator2.saw();
 				//input = out = oscillator2.additive() * 5.0f * bassVel * cutoffPhase;
 				bq_update(bq, LOWPASS, logfreq, filterQ, 1.0, sample_rate);
-				out = bq_process(bq, input) * 5.0f * bassVel * sigmoidVel;
+				out = bq_process(bq, input) * bassVel * sigmoidVel;
 			}
 
 			/*
@@ -753,8 +752,10 @@ struct KickBass {
 		ticks++;
 		bassTicks++;
 		noteOnTick++;
+
+		int len = (int)floor(length/4.0f);
 		
-		if ((ticks % (length/4)) == 0) {
+		if ((ticks % len) == 0) {
 			note16++;
 			if (note16 >= 4) {
 				note4++;
