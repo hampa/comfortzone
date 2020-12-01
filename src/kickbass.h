@@ -236,6 +236,7 @@ struct KBVoltageControlledOscillator {
 	}
 
 
+	float lastUsedPhase;
 	// phase goes from 0 to 1
 	// output -1 to 1
 	void process(float deltaTime) {
@@ -246,6 +247,10 @@ struct KBVoltageControlledOscillator {
 
 		for (int i = 0; i < KB_OVERSAMPLE; i++) {
 			sinBuffer[i] = sinf(2.f*M_PI * phase);
+			// assume sinebuffer[0]
+			if (i == 0) {
+				lastUsedPhase = phase;
+			}
 
 			if (phase < 0.5f)
 				sawBuffer[i] = 2.f * phase;
@@ -339,7 +344,7 @@ struct KickBass {
 	int ticks;
 	int length = 19600;
 	int isInitialized = 0;
-
+	float kickPhaseAtFirstBass;
 	int note4;
 	int note16;
 
@@ -411,6 +416,21 @@ struct KickBass {
 		return phase;
 	}
 
+	/*
+	float getKickPhaseAtFirstBass() {
+		float kickLength = getKickLength12(); 
+		float x = getKickLength16Note();
+		float phase = ticks / kickLength;
+		if (phase > 1)
+			return 1;
+		return phase;
+	}
+	*/
+
+	float get16To8NoteTrippletRatio() {
+		return 0.25f / (1.0f / 3.0f);
+	}
+
 	float getKickPhaseTicks(int tick) {
 		float kickLength = getKickLength12();
 		float phase = tick / kickLength;
@@ -447,9 +467,10 @@ struct KickBass {
 
 	char *getKickInfo() {
 		static char kickInfo[64] = "";
-		snprintf(kickInfo, sizeof(kickInfo), "%.0fhz %.0fhz",
+		snprintf(kickInfo, sizeof(kickInfo), "%.0fhz %.0fhz %.3fP",
 				floor(kickFreqMax),
-				floor(kickFreqMin));
+				floor(kickFreqMin),
+				kickPhaseAtFirstBass);
 		kickInfo[20] = '\0';	
 		return kickInfo;
 	}
@@ -463,8 +484,13 @@ struct KickBass {
 		return ticksPerClock / 4;
 	}
 
+	// 1/8 NOTE T 
 	float getKickLength12() {
 		return (length * 4) / 12.0f;	
+	}
+
+	float getKickLength16Note() {
+		return (length * 4) / 16.0f;	
 	}
 
 	void getKickPitchGraph(float u, point2 *out) {
@@ -659,6 +685,9 @@ struct KickBass {
 			if (note16 == 1) {	
 				oscillator2.setPitchQ(bassOctave, bassPitch, bassPitchCV, 0);
 				bassVel = bassVelocity;
+				if (bassTicks == 0) {
+					kickPhaseAtFirstBass = oscillator.lastUsedPhase;
+				}
 			}
 			else if (note16 == 2) {	
 				oscillator2.setPitchQ(bassOctave, bassPitch, bassPitchCV, 0);
