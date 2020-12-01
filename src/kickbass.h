@@ -605,6 +605,9 @@ struct KickBass {
 		}
 
 		if (clk) {
+			if (ticksPerClock != ticksPerClockRunner) {
+				DEBUG("clock updated diff %i", ticksPerClock - ticksPerClockRunner);	
+			}
 			ticksPerClock = ticksPerClockRunner;
 			if (ticksPerClockRunner > 1000) {
 				haveClockCycle = 1;
