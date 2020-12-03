@@ -102,9 +102,9 @@ struct Kickbaba : Module {
 				kickPitchMaxParam,
 				bassVelParam);
 
-		outputs[KICK_OUTPUT].setVoltage(kickBass.outputs[KickBass::KICK_OUT]);
-		outputs[BASS_OUTPUT].setVoltage(kickBass.outputs[KickBass::BASS_OUT]);
-		outputs[LFO_OUTPUT].setVoltage(kickBass.outputs[KickBass::LFO_OUT]);
+		outputs[KICK_OUTPUT].setVoltage(kickBass.outputs[KickBass::KICK_OUT] * 4.0f);
+		outputs[BASS_OUTPUT].setVoltage(kickBass.outputs[KickBass::BASS_OUT] * 4.0f);
+		outputs[LFO_OUTPUT].setVoltage(kickBass.outputs[KickBass::LFO_OUT] * 4.0f);
 
 		if (kickBass.gateTrigger) {
 			gateGenerator.trigger();
@@ -197,10 +197,11 @@ struct KickbabaWidget : ModuleWidget {
 	}
 
 	void draw(const DrawArgs &args) override {
+		ModuleWidget::draw(args);
+
 		if (module == NULL) {
 			return;
 		}
-		ModuleWidget::draw(args);
 		drawGraph(args.vg, 0, 30, 150, 60, 1.0f);
 	}
 
