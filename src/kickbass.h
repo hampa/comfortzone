@@ -7,7 +7,7 @@
 #include <math.h>
 
 //static const int UPSAMPLE = 2;
-const int KB_OVERSAMPLE = 2;
+const int KB_OVERSAMPLE = 16;
 
 struct point2 {
 	float x;
@@ -21,6 +21,7 @@ float CLAMP(float x, float upper, float lower)
 }
 */
 
+#define WITH_DECIMATOR 1
 #define CLAMP(x, low, high)  (((x) > (high)) ? (high) : (((x) < (low)) ? (low) : (x)))
 
 template <int OVERSAMPLE, int QUALITY>
@@ -126,9 +127,13 @@ struct KBVoltageControlledOscillator {
 	}
 
 	float getSaw(float phase) {
-		if (wavetable < 0.1f) {
-			return lerp(-1.0f, 1.0f, phase);
+		if (wavetable < 0.4f) {
+			//return lerp(-1.0f, 1.0f, phase);
+			return lerp(1.0f, -1.0f, phase);
 		}
+		return lerp(1, -0.8f, phase);
+		//	return lerp(-0.8f, 1.0f, phase);
+		/*
 		else if (wavetable < 0.2f) {
 			return lerp(-0.8f, 1.0f, phase);
 		}
@@ -136,6 +141,7 @@ struct KBVoltageControlledOscillator {
 			return lerp(1, -1.0f, phase);
 		}
 		return lerp(1, -0.8f, phase);
+		*/
 	}
 
 	float getOvertone(int x, float _phase, float q) {
@@ -301,6 +307,26 @@ struct KBVoltageControlledOscillator {
 		return w0 + (w1 - w0) * indx ;
 	}
 
+#ifdef WITH_DECIMATOR
+	float sin() {
+		return sinDecimator.process(sinBuffer);
+	}
+	float saw() {
+		return sawDecimator.process(sawBuffer);
+	}
+	float fmSaw() {
+		return sawDecimator.process(fmSawBuffer);
+	}
+	float sqr() {
+		return sqrDecimator.process(sqrBuffer);
+	}
+	float additive() {
+		return sawDecimator.process(additiveBuffer);
+	}
+	float pulse() {
+		return pulseDecimator.process(pulseBuffer);	
+	}
+#else
 	float sin() {
 		return sinBuffer[0];
 		//return sinDecimator.process(sinBuffer);
@@ -311,9 +337,8 @@ struct KBVoltageControlledOscillator {
 	}
 
 	float fmSaw() {
-		return fmSawBuffer[0];	
+		return fmSawBuffer[0];
 	}
-	
 	float sqr() {
 		return sqrBuffer[0];
 		//return sqrDecimator.process(sqrBuffer);
@@ -326,6 +351,7 @@ struct KBVoltageControlledOscillator {
 		return pulseBuffer[0];
 		//return pulseDecimator.process(pulseBuffer);	
 	}
+#endif
 
 	float light() {
 		return sinf(2*M_PI * phase);
@@ -359,6 +385,7 @@ struct KickBass {
 	int kickRepeats;
 	float bassFreqParam;
 	int bassTicks = 0;
+	int barTicks;
 	float kickDecay = 1;
 	int ticksPerClock = 0;
 	int ticksPerClockRunner = 0;
@@ -483,6 +510,7 @@ struct KickBass {
 		return ticksPerClock / 4;
 	}
 
+
 	// 1/8 NOTE T 
 	float getKickLength12() {
 		return (length * 4) / 12.0f;	
@@ -580,7 +608,7 @@ struct KickBass {
 	float outputs[NUM_OUTS];
 	bool gateTrigger;
 	const float FREQ_C4 = 261.6256f;
-	
+
 	void process(float sample_time, float _sample_rate, bool clk, bool rst, float _x1, float _y1, float _x2, float _y2, 
 			float pitchVoltage, float freq, float resParam, float wavetableParam, float kickPitchMax, float bassVelocity) {
 		x1 = _x1 * 0.25f;
@@ -602,10 +630,11 @@ struct KickBass {
 			noteOnTick = 0;
 			haveNoteOn = 1;
 		}
-
+		//int lenx = (int)floor(length/4.0f);
+		//DEBUG("clk %i ticks %i ticksPerClockRunner %i lenx %i", clk, ticks, ticksPerClockRunner, lenx);
 		if (clk) {
 			if (ticksPerClock != ticksPerClockRunner) {
-				DEBUG("clock updated diff %i", ticksPerClock - ticksPerClockRunner);	
+				DEBUG("clock updated diff %i", ticksPerClock - ticksPerClockRunner);
 			}
 			ticksPerClock = ticksPerClockRunner;
 			if (ticksPerClockRunner > 1000) {
@@ -615,6 +644,7 @@ struct KickBass {
 			ticks = 0;
 			note4 = 0;
 			note16 = 0;
+			barTicks = 0;
 		}
 		else {
 			ticksPerClockRunner++;
@@ -707,21 +737,37 @@ struct KickBass {
 				input = oscillator2.pulse();
 				bq_update(bq, LOWPASS,logfreq, filterQ, 1.0, sample_rate);
 				out = bq_process(bq, input) * bassVel * sigmoidVel;
-				//oscillator2.processAdditive(sample_time, cutoffPhase * freq * 32.0f, powf(filterRes, 2));
-				//out = oscillator2.additive() * 5.0f * bassVel;
 			}
 			else {
 				//float fmMod = filterRes;
-				//oscillator2.processFmSaw(sample_time, cutoffPhase, 0);
-				//oscillator2.processLerp(sample_time, cutoffPhase);
-				//out = input = oscillator2.fmSaw() * 5.0f * bassVel * cutoffPhase;
+				if (wavetable < 0.1f) {
+					//oscillator2.processFmSaw(sample_time, cutoffPhase, 0);
+					oscillator2.processFmSaw(sample_time, 1.0f, 0);
+					//oscillator2.processLerp(sample_time, cutoffPhase);
+					//out = input = oscillator2.fmSaw() * bassVel * cutoffPhase;;
+					input = oscillator2.fmSaw();
+					bq_update(bq, LOWPASS, logfreq, filterQ, 1.0, sample_rate);
+					out = bq_process(bq, input) * bassVel * sigmoidVel;
+				}
+				else if (wavetable < 0.2f) {
+					oscillator2.processAdditive(sample_time, cutoffPhase * freq * 32.0f, powf(filterRes, 2));
+					out = input = oscillator2.additive() * bassVel;
+				}
+				else {
+					oscillator2.processSaw(sample_time);
+					input = oscillator2.saw();
+					bq_update(bq, LOWPASS,logfreq, filterQ, 1.0, sample_rate);
+					out = bq_process(bq, input) * bassVel * sigmoidVel;
+					//bq_update(bq, LOWPASS, logfreq, filterQ, 1.0, sample_rate);
+					//out = bq_process(bq, input) * bassVel * sigmoidVel;
+				}
 				//
 				//oscillator2.processAdditive(sample_time, cutoffPhase * freq * 32.0f, powf(filterRes, 2));
-				oscillator2.processSaw(sample_time);
-				input = oscillator2.saw();
+				//oscillator2.processSaw(sample_time);
+				//input = oscillator2.saw();
 				//input = out = oscillator2.additive() * 5.0f * bassVel * cutoffPhase;
-				bq_update(bq, LOWPASS, logfreq, filterQ, 1.0, sample_rate);
-				out = bq_process(bq, input) * bassVel * sigmoidVel;
+				//bq_update(bq, LOWPASS, logfreq, filterQ, 1.0, sample_rate);
+				//out = bq_process(bq, input) * bassVel * sigmoidVel;
 			}
 
 			/*
@@ -755,10 +801,14 @@ struct KickBass {
 		ticks++;
 		bassTicks++;
 		noteOnTick++;
+		barTicks++;
 
 		int len = (int)floor(length/4.0f);
-		
-		if ((ticks % len) == 0) {
+
+		int nextTick = floor(ticksPerClock / 16.0f);
+		if (nextTick == 0)
+			return;
+		if ((barTicks % nextTick) == 0) {
 			note16++;
 			if (note16 >= 4) {
 				note4++;
