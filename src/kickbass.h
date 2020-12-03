@@ -367,6 +367,7 @@ struct KickBass {
 	KBVoltageControlledOscillator<KB_OVERSAMPLE, 16> oscillator3;
 
 	int ticks;
+	int epochTicks;
 	float length = 19600;
 	int isInitialized = 0;
 	float kickPhaseAtFirstBass;
@@ -636,6 +637,7 @@ struct KickBass {
 			if (ticksPerClock != ticksPerClockRunner) {
 				DEBUG("clock updated diff %i", ticksPerClock - ticksPerClockRunner);
 			}
+			//DEBUG("epoch ticks %i", epochTicks);
 			ticksPerClock = ticksPerClockRunner;
 			if (ticksPerClockRunner > 1000) {
 				haveClockCycle = 1;
@@ -645,9 +647,6 @@ struct KickBass {
 			note4 = 0;
 			note16 = 0;
 			barTicks = 0;
-		}
-		else {
-			ticksPerClockRunner++;
 		}
 
 		if (haveClockCycle == 0) {
@@ -795,13 +794,19 @@ struct KickBass {
 	}
 
 	void postProcess() {
-
 		isInitialized = 1;
 
 		ticks++;
 		bassTicks++;
 		noteOnTick++;
 		barTicks++;
+		epochTicks++;
+		ticksPerClockRunner++;
+
+		if (ticksPerClockRunner > ticksPerClock) {
+			//DEBUG("waiting for reset %i %i", ticksPerClockRunner, ticksPerClock);
+			return;
+		}
 
 		int len = (int)floor(length/4.0f);
 
