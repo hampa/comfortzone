@@ -21,8 +21,10 @@ float CLAMP(float x, float upper, float lower)
 }
 */
 
-#define WITH_DECIMATOR 1
+//#define WITH_DECIMATOR 1
 #define CLAMP(x, low, high)  (((x) > (high)) ? (high) : (((x) < (low)) ? (low) : (x)))
+
+#define USE_SIGMOID 1
 
 template <int OVERSAMPLE, int QUALITY>
 struct KBVoltageControlledOscillator {
@@ -126,7 +128,22 @@ struct KBVoltageControlledOscillator {
 		return res;
 	}
 
+	double getChirpRange(float w1, float w2, float M, float time, float sigmoid) {
+   		float res;
+		float curve = (time * time * time);
+		//float curve = 1.0f - getSigmoid(time, sigmoid);
+   		res=sinf(w1 * time + (w2 - w1) * curve/(2.0f * M_PI));
+   		//res=sinf(2.f * M_PI *
+   		return res;
+	}
+
+	float getChirpRange2(float t, float delta, float phase, float start, float end, float phi0) {
+    		phase = 2.0f * M_PI * t * (start + (end - start) * delta / 2.0f);
+    		return sinf(phase + phi0);
+   	}
+
 	float getSaw(float phase) {
+
 		if (wavetable < 0.4f) {
 			//return lerp(-1.0f, 1.0f, phase);
 			return lerp(1.0f, -1.0f, phase);
@@ -240,6 +257,85 @@ struct KBVoltageControlledOscillator {
 		}
 	}
 
+	float getSigmoid(float x, float k) {
+		x = clamp(x, 0.0f, 1.0f);
+		k = clamp(k, -1.0f, 1.0f);
+		float a = k - x * 2.0f * k + 1.0f;
+		float b = x - x * k; 
+		return (b / a); 
+	}
+
+	void processChirp(float ticks, float startPitch, float endPitch, float t) {
+		float d = ticks / 44100.0f;
+
+		float startFreq = 261.626f * powf(2.0f, startPitch);
+		float endFreq = 261.626f * powf(2.0f, endPitch);
+		float freqAt = lerp(startFreq, endFreq, t);
+		DEBUG("ticks %.2f t %.2f freqAt %.2f delta %.2f", ticks, t, freqAt, d);
+		sinBuffer[0] = sinf(2.0f * M_PI * freqAt * d);
+			
+    		//phase = 2.0f * M_PI * t * (start + (end - start) * delta / 2.0f);
+		/*
+		float deltaPhase = ticks / 44100.0f
+		float startFreq = 261.626f * powf(2.0f, startPitch);
+		float endFreq = 261.626f * powf(2.0f, endPitch);
+		float freq = lerp(startFreq, endFreq, t);
+		float deltaPhase = CLAMP(freq * deltaTime, 1e-6, 0.5f);
+		sinBuffer[0] = sinf(2.f * M_PI * thePhase);
+		phase += deltaPhase;
+		phase = kbEucMod(phase, 1.0f);
+		*/
+	}
+
+	void processSin(float ticks, float startPitch, float endPitch, float t) {
+		float startFreq = 261.626f * powf(2.0f, startPitch);
+		float endFreq = 261.626f * powf(2.0f, endPitch);
+		float freqAt = lerp(startFreq, endFreq, t);
+
+		sinBuffer[0] = sinf(2.f * M_PI * (ticks / 44100.0f) * startFreq);
+		//sinBuffer[0] = sinf(2.f * M_PI * (ticks / 44100.0f) * freqAt);
+		float w1 = startFreq;
+		float w2 = endFreq;
+		float delta = (ticks / 44100.f);
+		float tt = 1 * delta; 
+		//sinBuffer[0] = sinf(w1 * time + (w2 - w1) * time / (2.0f * M_PI));
+		sinBuffer[0] = sinf(2.f * M_PI * tt * (startFreq + (endFreq - startFreq)) * delta / 2.0f);
+	}
+
+	void sweep(int ticks, float startPitch, float endPitch, float interval, float maxTicks) {
+		float startFreq = 261.626f * powf(2.0f, startPitch);
+		float endFreq = 261.626f * powf(2.0f, endPitch);
+		float b = logf(endFreq/startFreq) / interval;
+		float a = 2.0f * M_PI * startFreq / b;	
+
+		float delta = ticks / maxTicks; 
+		float t = interval * delta;
+		float g_t = a * expf(b * t);
+		sinBuffer[0] = sinf(g_t);
+	}
+
+	// sweep (16000, 16500, 256/44100.0f, 256);
+	// 
+	float processSweep(float phaseOffset, float f_start, float f_end, float interval, float n_steps, int i, int oversample, float factor) {
+		if (factor < 1.0f)
+			factor = 1.0f;
+		//float factor = 2.0f;
+    		float b = logf((f_end /f_start) * factor) / interval;
+    		float a = 2.0f * M_PI * f_start / b;
+		//DEBUG("i %i b %f a %f", i, b, a);
+
+		//for (int i = 0; i < n_steps; i++) {
+		for (int x = 0; x < oversample; x++) {
+			float fractional_step = x / (float)oversample;
+        		//float delta = i / float(n_steps);
+        		float delta = (i + fractional_step) / float(n_steps);
+        		float t = interval * delta;
+        		float g_t = a * expf((b * t) * factor);
+			float result = sinf(g_t + phaseOffset);
+			sinBuffer[x] = result;
+		}
+		return sinBuffer[0];
+	}
 
 	float lastUsedPhase;
 	// phase goes from 0 to 1
@@ -372,6 +468,7 @@ struct KickBass {
 	float kickPhaseAtFirstBass;
 	int note4;
 	int note16;
+	float phase_offset = 0;	
 
 	float blinkPhase = 0.f;
 	float phase = -1;
@@ -433,7 +530,7 @@ struct KickBass {
 		float kickLength = length / 4.0f;
 		return ticks / kickLength;
 	}
-	
+
 	float getKickPhase12() {
 		float kickLength = getKickLength12(); 
 		float phase = ticks / kickLength;
@@ -522,8 +619,13 @@ struct KickBass {
 
 	void getKickPitchGraph(float u, point2 *out) {
 		u = CLAMP(u, 0.0f, 1.0f);
+#ifdef USE_SIGMOID
+		out->x = u;
+		out->y = 1.0f - getSigmoid(u, sigmoid); 
+#else
 		out->x = 3 * u * pow(1 - u, 2) * x1 + 3 * pow(u, 2) * (1 - u) * x2 + pow(u, 3);
 		out->y = pow(1 - u, 3) + 3 * u * pow(1 - u, 2) * y1 + 3 * pow(u, 2) * (1 - u) * y2;
+#endif
 	} 
 
 	float map(float s, float a1, float a2, float b1, float b2)
@@ -594,7 +696,7 @@ struct KickBass {
 		k = clamp(k, -1.0f, 1.0f);
 		float a = k - x * 2.0f * k + 1.0f;
 		float b = x - x * k; 
-		return b / a; 
+		return (b / a); 
 	}
 
 	enum {
@@ -608,13 +710,16 @@ struct KickBass {
 	float outputs[NUM_OUTS];
 	bool gateTrigger;
 	const float FREQ_C4 = 261.6256f;
-
+	float sigmoid = 0;
+	float kickDelta;
 	void process(float sample_time, float _sample_rate, bool clk, bool rst, float _x1, float _y1, float _x2, float _y2, 
 			float pitchVoltage, float freq, float resParam, float wavetableParam, float kickPitchMax, float bassVelocity) {
+		x1 = _x1 * 0.25f;
 		x1 = _x1 * 0.25f;
 		y1 = _y1 * 0.5f;
 		x2 = _x2;
 		y2 = _y2;
+		sigmoid = -_x1;
 		gateTrigger = false;
 		sample_rate = floor(_sample_rate);
 		wavetable = wavetableParam; 
@@ -661,6 +766,7 @@ struct KickBass {
 		if (ticks == 0 && note4 == 0) {
 			gateTrigger = true;
 			kickRepeats = 0;
+			kickDelta = 0;
 		}
 
 		pitchVoltage = CLAMP(pitchVoltage, -4.f, 4.f);
@@ -673,16 +779,22 @@ struct KickBass {
 		if (haveNoteOn) {
 			kickPhase = getKickPhaseTicks(noteOnTick);
 			outputs[BASS_OUT] = 0;
+			kickDelta = 0;
 		}
 
 		if (kickPhase <= 1.0f) {
-			octave = -4;
+			octave = -3;
 			float kickAmp = getKickEnvelope12(kickPhase);
 			float kickVoltageMin = pitchVoltage;
-			float kickVoltageMax = kickVoltageMin + 2 + kickPitchMax * 8.0f;
+			//float kickVoltageMax = kickVoltageMin + 2 + kickPitchMax * 8.0f;
+			float kickVoltageMax = pitchVoltage + 4.0f; //kickVoltageMin + 2 + kickPitchMax * 8.0f;
 			kickVoltageMax = CLAMP(kickVoltageMax, -8.0f, 10.0f);
 
+#ifdef USE_SIGMOID
+			float kickPitch = 1.0f - getSigmoid(kickPhase, sigmoid);
+#else
 			float kickPitch = getKickPitchRealtimeFast(kickPhase);
+#endif
 			float kickVoltageLerp = lerp(kickVoltageMin, kickVoltageMax, kickPitch);
 
 			// for display
@@ -693,9 +805,42 @@ struct KickBass {
 				oscillator.resetPhase();
 			}
 
-			oscillator.setPitchQ(octave, kickVoltageLerp, 0, 0);
+			//oscillator.setPitchQ(octave, kickVoltageLerp, 0, 0);
+			oscillator.setPitchQ(0, 0, 0, 0); //octave, kickVoltageLerp, 0, 0); // C
 			oscillator.process(sample_time);
-			outputs[KICK_OUT] = oscillator.sin() * kickAmp;
+			//outputs[KICK_OUT] = oscillator.sin();
+			//outputs[KICK_OUT] = oscillator.getChirpRange(440.0f, 440.0f, 1.0f, kickPhase, sigmoid) * kickAmp;
+			//outputs[KICK_OUT] = oscillator.getChirpRange(440.0f, 440.0f, 1.0f, kickDelta, sigmoid) * kickAmp;
+			float kickLength = getKickLength12(); 
+			float kickLength16 = getKickLength16Note();
+			float duration = kickLength / 44100.0f;
+
+			oscillator3.setPitchQ(0, 0, 0, 0);
+			float factor = _x1 * 10.0f + 1.0f;
+
+			if (ticks == 0) {	
+				/*
+				for (float xx = 0; xx < M_PI; xx += 0.1f) {	
+					float ph = oscillator3.processSweep(xx, 440.0f*5, 220.0f * 0.25f, kickLength/44100.0f, kickLength, kickLength, 1, factor);
+					DEBUG("offset %f phase %f", xx, ph);
+				}
+				*/
+				phase_offset = M_PI - oscillator3.processSweep(0, 440.0f*5, 220.0f * 0.25f, kickLength/44100.0f, kickLength, kickLength16, 1, factor);
+				float ph0 = oscillator3.processSweep(phase_offset, 440.0f*5, 220.0f * 0.25f, kickLength/44100.0f, kickLength, kickLength16 + 1, 1, factor);
+				float ph1 = oscillator3.processSweep(phase_offset, 440.0f*5, 220.0f * 0.25f, kickLength/44100.0f, kickLength, kickLength16, 1, factor);
+				//DEBUG("phase_offset = %f ph0 %f ph1 %f", phase_offset, ph0, ph1);
+			}
+
+			oscillator3.processSweep(phase_offset, 440.0f*5, 220.0f * 0.25f, kickLength/44100.0f, kickLength, ticks, 1, factor);
+			
+			//oscillator3.processSweep(440.0f, 439.0f, kickLength/44100.0f, kickLength, ticks);
+			//oscillator3.processChirp(ticks, 2, -4, kickPhase);
+			//oscillator3.processSin(ticks, 2, -2, kickPhase);
+			//oscillator3.sweep(ticks, 2, 1, kickLength);
+			outputs[KICK_OUT] = oscillator3.sin() * kickAmp;
+			//outputs[KICK_OUT] = oscillator3.sin() * kickAmp;
+
+			kickDelta += sample_time;
 		}
 		else {
 			oscillator.resetPhase();
