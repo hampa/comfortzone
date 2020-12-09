@@ -21,10 +21,10 @@ float CLAMP(float x, float upper, float lower)
 }
 */
 
-//#define WITH_DECIMATOR 1
+#define WITH_DECIMATOR 1
 #define CLAMP(x, low, high)  (((x) > (high)) ? (high) : (((x) < (low)) ? (low) : (x)))
 
-#define USE_SIGMOID 1
+//#define USE_SIGMOID 1
 
 template <int OVERSAMPLE, int QUALITY>
 struct KBVoltageControlledOscillator {
@@ -95,6 +95,10 @@ struct KBVoltageControlledOscillator {
 		// Note C4
 		freq = 261.626f * powf(2.0f, pitch) + freqOffset;
 		freq = CLAMP(freq, 0.0f, 20000.0f);
+	}
+
+	float getFreqFromNote(float note) {
+		return 261.626f * powf(2.0f, note / 12.0f); 
 	}
 
 	void setPulseWidth(float pulseWidth) {
@@ -478,12 +482,15 @@ struct KickBass {
 	float x1,y1,x2,y2;
 	float kickPitchFreq;
 	float kickFreqMax;
+	int kickFreqMaxNote;
 	float kickFreqMin;
+	int kickFreqMinNote;
 	float filterQ;
 	int kickRepeats;
 	float bassFreqParam;
 	int bassTicks = 0;
 	int barTicks;
+	int lfoTicks = 0;
 	float kickDecay = 1;
 	int ticksPerClock = 0;
 	int ticksPerClockRunner = 0;
@@ -580,6 +587,15 @@ struct KickBass {
 		return bar;	
 	}
 
+	char *getBarInfo() {
+		static char barInfo[64] = "";
+		snprintf(barInfo, sizeof(barInfo), "%i %.2f",
+				bar,
+				outputs[LFO_OUT]);
+		barInfo[20] = '\0';
+		return barInfo;
+	}
+
 	char *getBassInfo() {
 		static char bassInfo[64] = "";
 		snprintf(bassInfo, sizeof(bassInfo), "%.0fhz %.1fQ",
@@ -591,9 +607,11 @@ struct KickBass {
 
 	char *getKickInfo() {
 		static char kickInfo[64] = "";
-		snprintf(kickInfo, sizeof(kickInfo), "%.0fhz %.0fhz %.3fP",
+		snprintf(kickInfo, sizeof(kickInfo), "%.0fhz%i %.0fhz%i %.3fP",
 				floor(kickFreqMax),
+				kickFreqMaxNote,
 				floor(kickFreqMin),
+				kickFreqMinNote,
 				kickPhaseAtFirstBass);
 		kickInfo[20] = '\0';	
 		return kickInfo;
@@ -705,6 +723,7 @@ struct KickBass {
 		KICK_OUT,
 		BASS_OUT,
 		LFO_OUT,
+		GATE_OUT,
 		NUM_OUTS
 	};
 
@@ -714,7 +733,8 @@ struct KickBass {
 	float sigmoid = 0;
 	float kickDelta;
 	void process(float sample_time, float _sample_rate, bool clk, bool rst, float _x1, float _y1, float _x2, float _y2, 
-			float pitchVoltage, float freq, float resParam, float wavetableParam, float kickPitchMax, float bassVelocity) {
+			float pitchVoltage, float freq, float resParam, float wavetableParam, float kickPitchMinParam,
+			float kickPitchMaxParam, float bassVelocity) {
 		x1 = _x1 * 0.25f;
 		x1 = _x1 * 0.25f;
 		y1 = _y1 * 0.5f;
@@ -772,7 +792,13 @@ struct KickBass {
 
 		float octave = -5;
 
-		outputs[LFO_OUT] = (bar == 15) * 8.0f;
+		outputs[GATE_OUT] = (bar == 15);
+		if (haveClockCycle) {
+			outputs[LFO_OUT] = lfoTicks / (float)(ticksPerClock * 16.0f);
+		}
+		else {
+			outputs[LFO_OUT] = 0;	
+		}
 
 		float kickPhase = getKickPhase12();
 		if (haveNoteOn) {
@@ -782,30 +808,36 @@ struct KickBass {
 		}
 
 		if (kickPhase <= 1.0f) {
-			octave = -3;
+			octave = -2;
 			float kickAmp = getKickEnvelope12(kickPhase);
-			float kickVoltageMin = pitchVoltage;
-			//float kickVoltageMax = kickVoltageMin + 2 + kickPitchMax * 8.0f;
-			float kickVoltageMax = pitchVoltage + 4.0f; //kickVoltageMin + 2 + kickPitchMax * 8.0f;
-			kickVoltageMax = CLAMP(kickVoltageMax, -8.0f, 10.0f);
+			//float kickVoltageMin = floor(kickPitchMinParam / 12.0f);
+			//float kickVoltageMax = 2.0f + floor(kickPitchMaxParam / 12.0f); 
+
+			kickFreqMaxNote = floor(kickPitchMaxParam * 36.0f);
+			kickFreqMinNote = floor(kickPitchMinParam * 12.0f);
+			kickFreqMax = oscillator.getFreqFromNote(24.0f + kickFreqMaxNote);
+			kickFreqMin = oscillator.getFreqFromNote(kickFreqMinNote - 36.0f);
+
+			//DEBUG("%f %f", kickPitchMinParam, kickPitchMaxParam);
+			//float kickVoltageMax = pitchVoltage + 4.0f; //kickVoltageMin + 2 + kickPitchMax * 8.0f;
+			//kickVoltageMax = CLAMP(kickVoltageMax, -8.0f, 10.0f);
 
 #ifdef USE_SIGMOID
 			float kickPitch = 1.0f - getSigmoid(kickPhase, sigmoid);
 #else
 			float kickPitch = getKickPitchRealtimeFast(kickPhase);
 #endif
-			float kickVoltageLerp = lerp(kickVoltageMin, kickVoltageMax, kickPitch);
+			float kickFreqLerp = lerp(kickFreqMin, kickFreqMax, kickPitch);
 
 			// for display
-			kickFreqMax = oscillator.getPitchFreq(octave, kickVoltageMax, 0, 0);
-			kickFreqMin = oscillator.getPitchFreq(octave, kickVoltageMin, 0, 0);
+			//kickFreqMax = oscillator.getPitchFreq(octave, kickVoltageMax, 0, 0);
+			//kickFreqMin = oscillator.getPitchFreq(octave, kickVoltageMin, 0, 0);
 
 			if (ticks == 0) {
 				oscillator.resetPhase();
 			}
-
+			oscillator.freq = kickFreqLerp;
 			//oscillator.setPitchQ(octave, kickVoltageLerp, 0, 0);
-			oscillator.setPitchQ(0, 0, 0, 0); //octave, kickVoltageLerp, 0, 0); // C
 			oscillator.process(sample_time);
 			//outputs[KICK_OUT] = oscillator.sin();
 			//outputs[KICK_OUT] = oscillator.getChirpRange(440.0f, 440.0f, 1.0f, kickPhase, sigmoid) * kickAmp;
@@ -830,14 +862,15 @@ struct KickBass {
 				//DEBUG("phase_offset = %f ph0 %f ph1 %f", phase_offset, ph0, ph1);
 			}
 
-			oscillator3.processSweep(phase_offset, 440.0f*5, 220.0f * 0.25f, kickLength/44100.0f, kickLength, ticks, 1, factor);
+			//oscillator3.processSweep(phase_offset, 440.0f*5, 220.0f * 0.25f, kickLength/44100.0f, kickLength, ticks, 1, factor);
 			
 			//oscillator3.processSweep(440.0f, 439.0f, kickLength/44100.0f, kickLength, ticks);
 			//oscillator3.processChirp(ticks, 2, -4, kickPhase);
 			//oscillator3.processSin(ticks, 2, -2, kickPhase);
 			//oscillator3.sweep(ticks, 2, 1, kickLength);
-			outputs[KICK_OUT] = oscillator3.sin() * kickAmp;
 			//outputs[KICK_OUT] = oscillator3.sin() * kickAmp;
+			//outputs[KICK_OUT] = oscillator3.sin() * kickAmp;
+			outputs[KICK_OUT] = oscillator.sin() * kickAmp;
 
 			kickDelta += sample_time;
 		}
@@ -952,8 +985,9 @@ struct KickBass {
 			//DEBUG("waiting for reset %i %i", ticksPerClockRunner, ticksPerClock);
 			return;
 		}
+		lfoTicks++;
 
-		int len = (int)floor(length/4.0f);
+		//int len = (int)floor(length/4.0f);
 
 		int nextTick = floor(ticksPerClock / 16.0f);
 		if (nextTick == 0)
@@ -966,6 +1000,7 @@ struct KickBass {
 					bar++;
 					if (bar >= 16) {
 						bar = 0;
+						lfoTicks = 0;
 					}
 					oscillator.resetPhase();
 					note4 = 0;
