@@ -14,6 +14,8 @@ struct Kickbaba : Module {
 		FREQ_PARAM,
 		RES_PARAM,
 		MORPH_PARAM,
+		BASS_PITCH_PARAM,
+		SAW_PARAM,
 		NUM_PARAMS
 	};
 	enum InputIds {
@@ -27,6 +29,7 @@ struct Kickbaba : Module {
 		BASS_OUTPUT,
 		LFO_OUTPUT,
 		GATE_OUTPUT,
+		START_OUTPUT,
 		NUM_OUTPUTS
 	};
 	enum LightIds {
@@ -64,8 +67,9 @@ struct Kickbaba : Module {
 		configParam(FREQ_PARAM, 0.f, 1.f, 0.5f, "Frequency", " Hz", std::pow(2, 10.f), dsp::FREQ_C4 / std::pow(2, 5.f));
 		configParam(RES_PARAM, 0.f, 1.f, 0.f, "Resonance", "%", 0.f, 100.f);
 
-		// dev
 		configParam(MORPH_PARAM, 0.f, 1.f, 0.f, "");
+		configParam(BASS_PITCH_PARAM, 0.f, 1.f, 0.f, "");
+		configParam(SAW_PARAM, 0.f, 1.f, 0.f, "");
 
 	}
 
@@ -94,6 +98,8 @@ struct Kickbaba : Module {
 		float freqParam = params[FREQ_PARAM].getValue();
 		float resParam = params[RES_PARAM].getValue();
 		float morphParam = params[MORPH_PARAM].getValue();
+		float bassPitchParam = params[BASS_PITCH_PARAM].getValue();
+		float sawParam = params[SAW_PARAM].getValue();
 		float kickPitchMinParam = params[KICKPITCHMIN_PARAM].getValue();
 		float kickPitchMaxParam = params[KICKPITCHMAX_PARAM].getValue();
 		float bassVelParam = params[BASSVEL1_PARAM].getValue();
@@ -103,15 +109,18 @@ struct Kickbaba : Module {
 				pitchVoltage,
 				freqParam,
 				resParam,
+				sawParam,
 				morphParam,
 				kickPitchMinParam,
 				kickPitchMaxParam,
-				bassVelParam);
+				bassVelParam,
+				bassPitchParam);
 
 		outputs[KICK_OUTPUT].setVoltage(kickBass.outputs[KickBass::KICK_OUT] * 4.0f);
 		outputs[BASS_OUTPUT].setVoltage(kickBass.outputs[KickBass::BASS_OUT] * 4.0f);
 		outputs[LFO_OUTPUT].setVoltage(kickBass.outputs[KickBass::LFO_OUT] * 8.0f);
 		outputs[GATE_OUTPUT].setVoltage(kickBass.outputs[KickBass::GATE_OUT] * 8.0f);
+		outputs[START_OUTPUT].setVoltage(kickBass.outputs[KickBass::START_OUT] * 8.0f);
 
 		if (kickBass.gateTrigger) {
 			gateGenerator.trigger();
@@ -145,6 +154,7 @@ struct KickbabaWidget : ModuleWidget {
 		int x2 = x1 + w;
 		int x3 = x2 + w;
 		int x4 = x3 + w;
+		int x5 = x4 + w;
 
 		// kick 
 		y = 130;
@@ -156,10 +166,12 @@ struct KickbabaWidget : ModuleWidget {
 
 		// bass
 		y = 205;
-		addParam(createParam<RoundBlackKnob>(Vec(x0, y), module, Kickbaba::MORPH_PARAM));
-		addParam(createParam<RoundBlackKnob>(Vec(x1, y), module, Kickbaba::FREQ_PARAM));
-		addParam(createParam<RoundBlackKnob>(Vec(x2, y), module, Kickbaba::RES_PARAM));
-		addParam(createParam<RoundBlackKnob>(Vec(x3, y), module, Kickbaba::BASSVEL1_PARAM));
+		addParam(createParam<RoundBlackKnob>(Vec(x0, y), module, Kickbaba::BASS_PITCH_PARAM));
+		addParam(createParam<RoundBlackKnob>(Vec(x1, y), module, Kickbaba::SAW_PARAM));
+		addParam(createParam<RoundBlackKnob>(Vec(x2, y), module, Kickbaba::MORPH_PARAM));
+		addParam(createParam<RoundBlackKnob>(Vec(x3, y), module, Kickbaba::FREQ_PARAM));
+		addParam(createParam<RoundBlackKnob>(Vec(x4, y), module, Kickbaba::RES_PARAM));
+		addParam(createParam<RoundBlackKnob>(Vec(x5, y), module, Kickbaba::BASSVEL1_PARAM));
 
 		int iow = 34;
 		int iox0 = 12;
@@ -169,6 +181,7 @@ struct KickbabaWidget : ModuleWidget {
 		int iox4 = iox3 + iow;
 
 		addInput(createInput<PJ301MPort>(Vec(iox0, 268), module, Kickbaba::RESET_INPUT));
+		addOutput(createOutput<PJ301MPort>(Vec(iox2, 268), module, Kickbaba::START_OUTPUT));
 		addOutput(createOutput<PJ301MPort>(Vec(iox3, 268), module, Kickbaba::GATE_OUTPUT));
 		addOutput(createOutput<PJ301MPort>(Vec(iox4, 268), module, Kickbaba::LFO_OUTPUT));
 
@@ -189,17 +202,22 @@ struct KickbabaWidget : ModuleWidget {
 		// box.size.x
 		label = createWidget<Label>(Vec(0, 30));
 		//DEBUG("rack width %f box size.x %f", RACK_GRID_WIDTH, box.size.x);
-		label->box.size = Vec(box.size.x, 60);
+		label->box.size = Vec(box.size.x, RACK_GRID_WIDTH * 12);
 		label->text = "Kick BaBa";
 		addChild(label);
 	}
 
 	void step() override {
 		Kickbaba* module = dynamic_cast<Kickbaba*>(this->module);
+		char buf[128];
 		if (module) {
 			label->color = nvgRGBA(0, 0, 0, 255);
-
-			label->text =  module->kickBass.getBarInfo();
+			snprintf(buf, sizeof(buf), "BAR: %s\nKICK: %s\nBASS: %s",
+					module->kickBass.getBarInfo(),
+					module->kickBass.getKickInfo(),
+					module->kickBass.getBassInfo());
+			label->text = buf;
+			//label->text =  module->kickBass.getBarInfo();
 		       /*	+ "\n" + 
 					"KICK: " + module->kickBass.getKickInfo() + "\n" + 
 					"BASS: " + module->kickBass.getBassInfo();
@@ -214,7 +232,7 @@ struct KickbabaWidget : ModuleWidget {
 		if (module == NULL) {
 			return;
 		}
-		drawGraph(args.vg, 0, 30, 150, 60, 1.0f);
+		drawGraph(args.vg, 0, 30, RACK_GRID_WIDTH * 12, 60, 1.0f);
 	}
 
 	const int graphResolution = 50;

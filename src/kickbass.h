@@ -33,7 +33,7 @@ struct KBVoltageControlledOscillator {
 	float pw = 0.5f;
 	float pitch;
 	float voltage;
-	float wavetable = 0;
+	//float wavetable = 0;
 	float morph = 0;
 
 #ifdef WITH_DECIMATOR
@@ -101,6 +101,10 @@ struct KBVoltageControlledOscillator {
 		return 261.626f * powf(2.0f, note / 12.0f); 
 	}
 
+	float getBassFreqFromNote(float octave, float note, float voltage) {
+		return 261.626f * powf(2.0f, octave + (note / 12.0f) + voltage);
+	}
+
 	void setPulseWidth(float pulseWidth) {
 		const float pwMin = 0.01f;
 		pw = CLAMP(pulseWidth, pwMin, 1.0f - pwMin);
@@ -146,23 +150,29 @@ struct KBVoltageControlledOscillator {
     		return sinf(phase + phi0);
    	}
 
+	int sawType = 4;
 	float getSaw(float phase) {
-
-		if (wavetable < 0.4f) {
-			//return lerp(-1.0f, 1.0f, phase);
-			return lerp(1.0f, -1.0f, phase);
+		float factor;
+		float phase2 = phase * 2.0f - 1.0f;
+		switch (sawType) {
+			case 0:
+				return lerp(1.0f, -1.0f, phase);
+			case 1:
+				factor = lerp(1.0, 2.0f, morph);
+				return -2.0f * (sinf((phase * factor) *M_PI * 0.5f) - 0.5f);
+			case 2:
+				return -sinf((phase * 2.0f - 1.0f) * M_PI * 0.5f);
+			case 3:
+				//factor = lerp(0.635f, 1.4f, morph);
+				factor = lerp(0, 1.4f, morph);
+				return -(phase2 - (factor * sinf(phase2 * M_PI)));
+			case 4:
+				factor = lerp(0.1f, 0.9f, morph);
+				return sinf(M_PI * factor * factor * 32.0f * logf(phase + 0.0001f));
+			case 5:
+				return getChirp(phase, morph);
 		}
-		return lerp(1, -0.8f, phase);
-		//	return lerp(-0.8f, 1.0f, phase);
-		/*
-		else if (wavetable < 0.2f) {
-			return lerp(-0.8f, 1.0f, phase);
-		}
-		else if (wavetable < 0.3f) {
-			return lerp(1, -1.0f, phase);
-		}
-		return lerp(1, -0.8f, phase);
-		*/
+		return lerp(1.0f, -1.0f, phase);
 	}
 
 	float getOvertone(int x, float _phase, float q) {
@@ -473,7 +483,8 @@ struct KickBass {
 	int note4;
 	int note16;
 	float phase_offset = 0;	
-
+	int bassNote;
+	float bassFreq;
 	float blinkPhase = 0.f;
 	float phase = -1;
 	float sawPhase = -1;
@@ -498,7 +509,7 @@ struct KickBass {
 	int bar = 0;
 	int noteOnTick = 0;
 	int haveNoteOn = 0;
-	float wavetable;
+	//float wavetable;
 	float morph;
 	int sample_rate = 44100;
 
@@ -595,10 +606,17 @@ struct KickBass {
 		return barInfo;
 	}
 
+	const char *getNoteName(int i) {
+		const char *notes[] = {"C", "C#", "D", "Eb", "E", "F", "F#", "G", "G#", "A", "Bb", "B" };
+		return notes[i % 12];
+	}
+
 	char *getBassInfo() {
 		static char bassInfo[64] = "";
-		snprintf(bassInfo, sizeof(bassInfo), "%.0fhz %.1fQ",
-				bassFreqParam,
+		snprintf(bassInfo, sizeof(bassInfo), "%.2fhz %i %s %.1fQ",
+				bassFreq,
+				bassNote,
+				getNoteName(bassNote),
 				filterQ);
 		bassInfo[20] = '\0';
 		return bassInfo;
@@ -606,11 +624,11 @@ struct KickBass {
 
 	char *getKickInfo() {
 		static char kickInfo[64] = "";
-		snprintf(kickInfo, sizeof(kickInfo), "%.0fhz%i %.0fhz%i %.3fP",
-				floor(kickFreqMax),
-				kickFreqMaxNote,
+		snprintf(kickInfo, sizeof(kickInfo), "%.0fhz %s %.0fhz %s %.3fP",
 				floor(kickFreqMin),
-				kickFreqMinNote,
+				getNoteName(kickFreqMinNote),
+				floor(kickFreqMax),
+				getNoteName(kickFreqMaxNote),
 				kickPhaseAtFirstBass);
 		kickInfo[20] = '\0';	
 		return kickInfo;
@@ -654,13 +672,7 @@ struct KickBass {
 	// 0 to 1
 	float getBassGraph(float t) {
 		t = CLAMP(t, 0.0f, 1.0f);
-		float c;
-		if (wavetable >= 0.5f) {
-			c = oscillator2.getChirp(t, morph);
-		}
-		else {
-			c = oscillator2.getSaw(t);
-		}
+		float c = oscillator2.getSaw(t);
 		return map(c, -1.0f, 1.0f, 0.0f, 1.0f);
 	}
 
@@ -723,6 +735,7 @@ struct KickBass {
 		BASS_OUT,
 		LFO_OUT,
 		GATE_OUT,
+		START_OUT,
 		NUM_OUTS
 	};
 
@@ -731,9 +744,11 @@ struct KickBass {
 	const float FREQ_C4 = 261.6256f;
 	float sigmoid = 0;
 	float kickDelta;
+	int sawType;
+	//float morph;
 	void process(float sample_time, float _sample_rate, bool clk, bool rst, float _x1, float _y1, float _x2, float _y2, 
-			float pitchVoltage, float freq, float resParam, float wavetableParam, float kickPitchMinParam,
-			float kickPitchMaxParam, float bassVelocity) {
+			float pitchVoltageParam, float freq, float resParam, float sawParam, float morphParam, float kickPitchMinParam,
+			float kickPitchMaxParam, float bassVelocity, float bassPitchParam) {
 		x1 = _x1 * 0.25f;
 		x1 = _x1 * 0.25f;
 		y1 = _y1 * 0.5f;
@@ -742,7 +757,9 @@ struct KickBass {
 		sigmoid = -_x1;
 		gateTrigger = false;
 		sample_rate = floor(_sample_rate);
-		wavetable = wavetableParam; 
+		//wavetable = wavetableParam; 
+		sawType = floorf(sawParam * 5.0f);
+		/*
 		bool useMorph = false;
 		if (wavetable >= 0.5f) {
 			morph = (wavetableParam - 0.5f) * 2.0f; 
@@ -750,7 +767,8 @@ struct KickBass {
 		}
 		oscillator.wavetable = wavetableParam;
 		oscillator2.morph = morph;
-
+		*/
+		morph = morphParam;
 		if (rst) {
 			noteOnTick = 0;
 			haveNoteOn = 1;
@@ -789,7 +807,7 @@ struct KickBass {
 			kickDelta = 0;
 		}
 
-		pitchVoltage = CLAMP(pitchVoltage, -4.f, 4.f);
+		pitchVoltageParam = CLAMP(pitchVoltageParam, -4.f, 4.f);
 
 		float octave = -5;
 
@@ -800,6 +818,8 @@ struct KickBass {
 		else {
 			outputs[LFO_OUT] = 0;	
 		}
+		// 1 ms trigger
+		outputs[START_OUT] = (bar == 0 && ticks <= (sample_rate * 0.01f));
 
 		float kickPhase = getKickPhase12();
 		if (haveNoteOn) {
@@ -883,8 +903,8 @@ struct KickBass {
 		if (note16 > 0 && haveNoteOn == 0) {
 			float bassVel = 1;
 			float bassOctave = -4;
-			float bassPitchCV = 0;
-			float bassPitch = pitchVoltage;
+			float bassPitchCV = bassPitchParam;
+			float bassPitch = pitchVoltageParam;
 
 			float cutoffPhase = 1 - getBassPhase();
 			bassFreqParam = (freq * 5000);
@@ -892,24 +912,34 @@ struct KickBass {
 			float filterRes = CLAMP(resParam, 0.f, 1.f);
 			filterQ = powf(filterRes, 2) * 10.0f + 0.01f;
 
+			bassNote = floor(bassPitchParam * 11.0f);
+			bassFreq = oscillator2.getBassFreqFromNote(-3, bassNote, pitchVoltageParam);
+			oscillator2.freq = bassFreq;
+			oscillator2.sawType = sawType;
+
+				
 			if (note16 == 1) {
-				oscillator2.setPitchQ(bassOctave, bassPitch, bassPitchCV, 0);
+				//DEBUG("%f %f", bassPitch, bassPitchCV);
+				//oscillator2.setPitchQ(bassOctave, bassPitch, bassPitchCV, 0);
 				bassVel = bassVelocity;
 				if (bassTicks == 0) {
 					kickPhaseAtFirstBass = oscillator.lastUsedPhase;
 				}
 			}
+			/*
 			else if (note16 == 2) {
 				oscillator2.setPitchQ(bassOctave, bassPitch, bassPitchCV, 0);
 			}
 			else if (note16 == 3) {
 				oscillator2.setPitchQ(bassOctave, bassPitch, bassPitchCV, 0);
 			}
-			oscillator2.wavetable = wavetable;
+			*/
+			//oscillator2.wavetable = wavetable;
 
 			float sigmoidVel = 1.0f - getSigmoid(getBassPhase(), 0.9f); 
 			float input = 0;
 			float out = 0;
+			/*
 			if (useMorph) {
 				oscillator2.processPulse(sample_time);
 				input = oscillator2.pulse();
@@ -936,17 +966,15 @@ struct KickBass {
 					input = oscillator2.saw();
 					bq_update(bq, LOWPASS,logfreq, filterQ, 1.0, sample_rate);
 					out = bq_process(bq, input) * bassVel * sigmoidVel;
-					//bq_update(bq, LOWPASS, logfreq, filterQ, 1.0, sample_rate);
-					//out = bq_process(bq, input) * bassVel * sigmoidVel;
 				}
-				//
-				//oscillator2.processAdditive(sample_time, cutoffPhase * freq * 32.0f, powf(filterRes, 2));
-				//oscillator2.processSaw(sample_time);
-				//input = oscillator2.saw();
-				//input = out = oscillator2.additive() * 5.0f * bassVel * cutoffPhase;
-				//bq_update(bq, LOWPASS, logfreq, filterQ, 1.0, sample_rate);
-				//out = bq_process(bq, input) * bassVel * sigmoidVel;
 			}
+			*/
+			oscillator2.sawType = sawType;
+			oscillator2.morph = morph;
+			oscillator2.processSaw(sample_time);
+			input = oscillator2.saw();
+			bq_update(bq, LOWPASS,logfreq, filterQ, 1.0, sample_rate);
+			out = bq_process(bq, input) * bassVel * sigmoidVel;
 
 			/*
 			float clickLength = 500;
