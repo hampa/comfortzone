@@ -472,6 +472,7 @@ struct KBVoltageControlledOscillator {
 struct KickBass {
 	//Bezier::Bezier<3> *kickPitchBezier; 
 	biquad *bq;
+	biquad *bq2;
 	KBVoltageControlledOscillator<KB_OVERSAMPLE, 16> oscillator;
 	KBVoltageControlledOscillator<KB_OVERSAMPLE, 16> oscillator2;
 	KBVoltageControlledOscillator<KB_OVERSAMPLE, 16> oscillator3;
@@ -518,7 +519,9 @@ struct KickBass {
 	void Init() {
 		//kickPitchBezier = new Bezier::Bezier<3>({ {0, 1}, {0.5, 0.5}, {0, 0}, {1, 0}});
 		bq = bq_new(LOWPASS, 5000, 1, 1.0, sample_rate);
+		bq2 = bq_new(LOWPASS, 5000, 1, 1.0, sample_rate);
 		bq_reset(bq);
+		bq_reset(bq2);
 	}
 
 	void Destroy() {
@@ -531,6 +534,10 @@ struct KickBass {
 		if (bq != NULL) {
 			bq_destroy(bq);
 			bq = NULL;
+		}
+		if (bq2 != NULL) {
+			bq_destroy(bq2);
+			bq2 = NULL;
 		}
 	}
 
@@ -737,6 +744,8 @@ struct KickBass {
 		LFO_OUT,
 		GATE_OUT,
 		START_OUT,
+		BASS_ENV_OUT,
+		BASS_RAW_OUT,
 		NUM_OUTS
 	};
 
@@ -826,6 +835,8 @@ struct KickBass {
 			outputs[BASS_OUT] = 0;
 			kickDelta = 0;
 		}
+		outputs[BASS_ENV_OUT] = 0;
+		outputs[BASS_RAW_OUT] = 0;
 
 		if (kickPhase <= 1.0f) {
 			octave = -2;
@@ -910,6 +921,7 @@ struct KickBass {
 			float logfreq = 20 + bassFreqParam * cutoffPhase;
 			float filterRes = CLAMP(resParam, 0.f, 1.f);
 			filterQ = powf(filterRes, 2) * 10.0f + 0.01f;
+			outputs[BASS_ENV_OUT] = cutoffPhase;
 
 			bassNote = floor(bassPitchParam * 11.0f);
 			bassFreq = oscillator2.getBassFreqFromNote(-3, bassNote, pitchVoltageParam);
@@ -973,29 +985,16 @@ struct KickBass {
 			oscillator2.processSaw(sample_time);
 			input = oscillator2.saw();
 			bq_update(bq, LOWPASS,logfreq, filterQ, 1.0, sample_rate);
+			bq_update(bq2, LOWPASS,logfreq, filterQ, 1.0, sample_rate);
 			out = bq_process(bq, input) * bassVel * sigmoidVel;
-
-			/*
-			float clickLength = 500;
-			if (bassTicks < clickLength) {
-				float clickPhase = bassTicks / clickLength;
-				float attackPhase = bassTicks / 20.0f;
-				float clickVel = 1.0f;
-				if (attackPhase < 1.0f) {
-					clickVel = attackPhase;
-				}
-
-				float c = oscillator2.getClick(clickPhase, 2.0f, 50.0f, 1.0f);
-				float clickOut = c * 5.0f * bassVel * clickVel;
-				//outputs[BASS_OUT] = lerp(clickOut, out, clickPhase);
-				input = lerp(clickOut, input, clickPhase);
-			}
-			*/
+			//out = bq_process(bq, bq_process(bq2, input)) * bassVel * sigmoidVel;
+			outputs[BASS_RAW_OUT] = input * bassVel * sigmoidVel;
 
 			outputs[BASS_OUT] = out;
 		}
 		else {
 			outputs[BASS_OUT] = 0;
+			outputs[BASS_RAW_OUT] = 0;
 		}
 	}
 
@@ -1047,6 +1046,7 @@ struct KickBass {
 			oscillator2.resetPhase();
 			if (bq != NULL) {
 				bq_reset(bq);
+				bq_reset(bq2);
 			}
 		}
 	}

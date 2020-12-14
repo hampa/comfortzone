@@ -30,6 +30,8 @@ struct Kickbaba : Module {
 		LFO_OUTPUT,
 		GATE_OUTPUT,
 		START_OUTPUT,
+		BASS_ENV_OUTPUT,
+		BASS_RAW_OUTPUT,
 		NUM_OUTPUTS
 	};
 	enum LightIds {
@@ -121,6 +123,8 @@ struct Kickbaba : Module {
 		outputs[LFO_OUTPUT].setVoltage(kickBass.outputs[KickBass::LFO_OUT] * 8.0f);
 		outputs[GATE_OUTPUT].setVoltage(kickBass.outputs[KickBass::GATE_OUT] * 8.0f);
 		outputs[START_OUTPUT].setVoltage(kickBass.outputs[KickBass::START_OUT] * 8.0f);
+		outputs[BASS_ENV_OUTPUT].setVoltage(kickBass.outputs[KickBass::BASS_ENV_OUT] * 8.0f);
+		outputs[BASS_RAW_OUTPUT].setVoltage(kickBass.outputs[KickBass::BASS_RAW_OUT] * 8.0f);
 
 		if (kickBass.gateTrigger) {
 			gateGenerator.trigger();
@@ -179,11 +183,14 @@ struct KickbabaWidget : ModuleWidget {
 		int iox2 = iox1 + iow;
 		int iox3 = iox2 + iow;
 		int iox4 = iox3 + iow;
+		int iox5 = iox4 + iow;
 
 		addInput(createInput<PJ301MPort>(Vec(iox0, 268), module, Kickbaba::RESET_INPUT));
-		addOutput(createOutput<PJ301MPort>(Vec(iox2, 268), module, Kickbaba::START_OUTPUT));
-		addOutput(createOutput<PJ301MPort>(Vec(iox3, 268), module, Kickbaba::GATE_OUTPUT));
-		addOutput(createOutput<PJ301MPort>(Vec(iox4, 268), module, Kickbaba::LFO_OUTPUT));
+		addOutput(createOutput<PJ301MPort>(Vec(iox1, 268), module, Kickbaba::START_OUTPUT));
+		addOutput(createOutput<PJ301MPort>(Vec(iox2, 268), module, Kickbaba::GATE_OUTPUT));
+		addOutput(createOutput<PJ301MPort>(Vec(iox3, 268), module, Kickbaba::LFO_OUTPUT));
+		addOutput(createOutput<PJ301MPort>(Vec(iox4, 268), module, Kickbaba::BASS_ENV_OUTPUT));
+		addOutput(createOutput<PJ301MPort>(Vec(iox5, 268), module, Kickbaba::BASS_RAW_OUTPUT));
 
 		// input output
 		addInput(createInput<PJ301MPort>(Vec(iox0, 320), module, Kickbaba::CLOCK_INPUT));
