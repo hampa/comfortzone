@@ -102,6 +102,10 @@ struct KBVoltageControlledOscillator {
 		return 261.626f * powf(2.0f, note / 12.0f); 
 	}
 
+	float getVoltageFromNote(float note) {
+		return note / 12.0f;
+	}
+
 	float getBassFreqFromNote(float octave, float note, float voltage) {
 		return 261.626f * powf(2.0f, octave + (note / 12.0f) + voltage);
 	}
@@ -496,6 +500,8 @@ struct KickBass {
 	float x1,y1,x2,y2;
 	float kickPitchFreq;
 	float kickFreqMax;
+	float kickVoltageMax;
+	float kickVoltageMin;
 	int kickFreqMaxNote;
 	float kickFreqMin;
 	int kickFreqMinNote;
@@ -635,13 +641,15 @@ struct KickBass {
 
 	char *getKickInfo() {
 		static char kickInfo[64] = "";
-		snprintf(kickInfo, sizeof(kickInfo), "%.0fhz %s %.0fhz %s %.3fP",
+		snprintf(kickInfo, sizeof(kickInfo), "%.0fhz %s %.1fv %.0fhz %s %.1fv %.3fP",
 				floor(kickFreqMin),
 				getNoteName(kickFreqMinNote),
+				kickVoltageMin,
 				floor(kickFreqMax),
 				getNoteName(kickFreqMaxNote),
+				kickVoltageMax,
 				kickPhaseAtFirstBass);
-		kickInfo[20] = '\0';	
+		kickInfo[63] = '\0';	
 		return kickInfo;
 	}
 
@@ -749,6 +757,8 @@ struct KickBass {
 		START_OUT,
 		BASS_ENV_OUT,
 		BASS_RAW_OUT,
+		PITCH_ENV_OUT,
+		PITCH_OUT,
 		NUM_OUTS
 	};
 
@@ -760,7 +770,7 @@ struct KickBass {
 	int sawType;
 	//float morph;
 	void process(float sample_time, float _sample_rate, bool clk, bool rst, float _x1, float _y1, float _x2, float _y2, 
-			float pitchVoltageParam, float freq, float resParam, float sawParam, float morphParam, float kickPitchMinParam,
+			float pitchVoltageParam, float freqParam, float resParam, float sawParam, float morphParam, float kickPitchMinParam,
 			float kickPitchMaxParam, float bassVelocity, float bassPitchParam) {
 		x1 = _x1 * 0.25f;
 		x1 = _x1 * 0.25f;
@@ -840,10 +850,13 @@ struct KickBass {
 		}
 		outputs[BASS_ENV_OUT] = 0;
 		outputs[BASS_RAW_OUT] = 0;
+		outputs[PITCH_ENV_OUT] = 0;
+		outputs[PITCH_OUT] = 0;
 
 		if (kickPhase <= 1.0f) {
 			octave = -2;
 			float kickAmp = getKickEnvelope12(kickPhase);
+			outputs[PITCH_ENV_OUT] = kickAmp;
 			//float kickVoltageMin = floor(kickPitchMinParam / 12.0f);
 			//float kickVoltageMax = 2.0f + floor(kickPitchMaxParam / 12.0f); 
 
@@ -851,6 +864,8 @@ struct KickBass {
 			kickFreqMinNote = floor(kickPitchMinParam * 12.0f);
 			kickFreqMax = oscillator.getFreqFromNote(24.0f + kickFreqMaxNote);
 			kickFreqMin = oscillator.getFreqFromNote(kickFreqMinNote - 36.0f);
+			kickVoltageMax = oscillator.getVoltageFromNote(24.0f + kickFreqMaxNote); 
+			kickVoltageMin = oscillator.getVoltageFromNote(kickFreqMinNote - 36.0f);
 
 			//DEBUG("%f %f", kickPitchMinParam, kickPitchMaxParam);
 			//float kickVoltageMax = pitchVoltage + 4.0f; //kickVoltageMin + 2 + kickPitchMax * 8.0f;
@@ -861,7 +876,9 @@ struct KickBass {
 #else
 			float kickPitch = getKickPitchRealtimeFast(kickPhase);
 #endif
+			//kickPitch = 0.5f;
 			float kickFreqLerp = lerp(kickFreqMin, kickFreqMax, kickPitch);
+			float kickVoltageLerp = lerp(kickVoltageMin, kickVoltageMax, kickPitch);
 
 			// for display
 			//kickFreqMax = oscillator.getPitchFreq(octave, kickVoltageMax, 0, 0);
@@ -871,6 +888,7 @@ struct KickBass {
 				oscillator.resetPhase();
 			}
 			oscillator.freq = kickFreqLerp;
+			outputs[PITCH_OUT] = kickVoltageLerp;
 			//oscillator.setPitchQ(octave, kickVoltageLerp, 0, 0);
 			oscillator.process(sample_time);
 			//outputs[KICK_OUT] = oscillator.sin();
@@ -913,6 +931,7 @@ struct KickBass {
 			outputs[KICK_OUT] = 0;
 		}
 	
+		outputs[BASS_ENV_OUT] = 1.0f;
 		if (note16 > 0 && haveNoteOn == 0) {
 			float bassVel = 1;
 			float bassOctave = -4;
@@ -920,7 +939,7 @@ struct KickBass {
 			float bassPitch = pitchVoltageParam;
 
 			float cutoffPhase = 1 - getBassPhase();
-			bassFreqParam = (freq * 5000);
+			bassFreqParam = (freqParam * 5000);
 			float logfreq = 20 + bassFreqParam * cutoffPhase;
 			float filterRes = CLAMP(resParam, 0.f, 1.f);
 			filterQ = powf(filterRes, 2) * 10.0f + 0.01f;
@@ -1004,16 +1023,18 @@ struct KickBass {
 
 			ripples::RipplesEngine::Frame frame;
 			frame.res_knob = 0; //params[RES_PARAM].getValue();
-			frame.freq_knob = cutoffPhase * 0.9f; //rescale(logfreq, std::log2(ripples::kFreqKnobMin), std::log2(ripples::kFreqKnobMax), 0.f, 1.f);
-			frame.fm_knob = 0; //params[FM_PARAM].getValue();
+			frame.freq_knob = 0; //rescale(freqParam, std::log2(ripples::kFreqKnobMin), std::log2(ripples::kFreqKnobMax), 0.f, 1.f);
+			//DEBUG("param %f knob %f\n", freqParam, frame.freq_knob);
+			//frame.freq_knob = cutoffPhase; //rescale(logfreq, std::log2(ripples::kFreqKnobMin), std::log2(ripples::kFreqKnobMax), 0.f, 1.f);
+			frame.fm_knob = 1.0f; //params[FM_PARAM].getValue();
 			frame.gain_cv_present = false; ///inputs[GAIN_INPUT].isConnected();
 
 
 			frame.res_cv = 0; //inputs[RES_INPUT].getPolyVoltage(c);
                         //frame.freq_cv = cutoffPhase * 8.0f; //inputs[FREQ_INPUT].getPolyVoltage(c);
-                        frame.freq_cv = 0; //freq;
+                        frame.freq_cv = cutoffPhase * 8.0f;
                         frame.fm_cv = 0; //inputs[FM_INPUT].getPolyVoltage(c);
-                        frame.input = input;
+                        frame.input = input * 5.0f;
                         frame.gain_cv = 0;
 
                         engine.process(frame);

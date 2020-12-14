@@ -32,6 +32,8 @@ struct Kickbaba : Module {
 		START_OUTPUT,
 		BASS_ENV_OUTPUT,
 		BASS_RAW_OUTPUT,
+		PITCH_ENV_OUTPUT,
+		PITCH_OUTPUT,
 		NUM_OUTPUTS
 	};
 	enum LightIds {
@@ -66,7 +68,11 @@ struct Kickbaba : Module {
 		configParam(KICKPITCH_Y2_PARAM, 0.f, 1.f, 0.f, "");
 		configParam(KICKPITCHMIN_PARAM, 0.f, 1.f, 0.f, "");
 		configParam(KICKPITCHMAX_PARAM, 0.f, 1.f, 0.f, "");
-		configParam(FREQ_PARAM, 0.f, 1.f, 0.5f, "Frequency", " Hz", std::pow(2, 10.f), dsp::FREQ_C4 / std::pow(2, 5.f));
+		//configParam(FREQ_PARAM, 0.f, 1.f, 0.5f, "Frequency", " Hz", std::pow(2, 10.f), dsp::FREQ_C4 / std::pow(2, 5.f));
+		float freqMin = std::log2(ripples::kFreqKnobMin);
+		float freqMax = std::log2(ripples::kFreqKnobMax);
+	//	configParam(FREQ_PARAM, freqMin, freqMax, freqMax, "Frequency", " Hz", std::pow(2, 10.f), dsp::FREQ_C4 / std::pow(2, 5.f));
+		configParam(FREQ_PARAM, freqMin, freqMax, freqMax, "Frequency", " Hz", 2.f); 
 		configParam(RES_PARAM, 0.f, 1.f, 0.f, "Resonance", "%", 0.f, 100.f);
 
 		configParam(MORPH_PARAM, 0.f, 1.f, 0.f, "");
@@ -118,13 +124,15 @@ struct Kickbaba : Module {
 				bassVelParam,
 				bassPitchParam);
 
-		outputs[KICK_OUTPUT].setVoltage(kickBass.outputs[KickBass::KICK_OUT] * 4.0f);
-		outputs[BASS_OUTPUT].setVoltage(kickBass.outputs[KickBass::BASS_OUT] * 4.0f);
+		outputs[KICK_OUTPUT].setVoltage(kickBass.outputs[KickBass::KICK_OUT] * 5.0f);
+		outputs[BASS_OUTPUT].setVoltage(kickBass.outputs[KickBass::BASS_OUT]);
 		outputs[LFO_OUTPUT].setVoltage(kickBass.outputs[KickBass::LFO_OUT] * 8.0f);
 		outputs[GATE_OUTPUT].setVoltage(kickBass.outputs[KickBass::GATE_OUT] * 8.0f);
 		outputs[START_OUTPUT].setVoltage(kickBass.outputs[KickBass::START_OUT] * 8.0f);
 		outputs[BASS_ENV_OUTPUT].setVoltage(kickBass.outputs[KickBass::BASS_ENV_OUT] * 8.0f);
 		outputs[BASS_RAW_OUTPUT].setVoltage(kickBass.outputs[KickBass::BASS_RAW_OUT] * 8.0f);
+		outputs[PITCH_ENV_OUTPUT].setVoltage(kickBass.outputs[KickBass::PITCH_ENV_OUT] * 8.0f);
+		outputs[PITCH_OUTPUT].setVoltage(kickBass.outputs[KickBass::PITCH_OUT]);
 
 		if (kickBass.gateTrigger) {
 			gateGenerator.trigger();
@@ -197,6 +205,8 @@ struct KickbabaWidget : ModuleWidget {
 		addInput(createInput<PJ301MPort>(Vec(iox1, 320), module, Kickbaba::PITCH_INPUT));
 		addOutput(createOutput<PJ301MPort>(Vec(iox2, 320), module, Kickbaba::KICK_OUTPUT));
 		addOutput(createOutput<PJ301MPort>(Vec(iox3, 320), module, Kickbaba::BASS_OUTPUT));
+		addOutput(createOutput<PJ301MPort>(Vec(iox4, 320), module, Kickbaba::PITCH_ENV_OUTPUT));
+		addOutput(createOutput<PJ301MPort>(Vec(iox5, 320), module, Kickbaba::PITCH_OUTPUT));
 
 
 		addChild(createLightCentered<MediumLight<RedLight>>(mm2px(Vec(131.125, 68.642)), module, Kickbaba::LIGHT0_LIGHT));
