@@ -2,12 +2,13 @@
 #define KICKBASS_H 1
 
 #include "biquad.h"
+#include "ripples.hpp"
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
 
 //static const int UPSAMPLE = 2;
-const int KB_OVERSAMPLE = 16;
+const int KB_OVERSAMPLE = 1;
 
 struct point2 {
 	float x;
@@ -21,7 +22,7 @@ float CLAMP(float x, float upper, float lower)
 }
 */
 
-#define WITH_DECIMATOR 1
+//#define WITH_DECIMATOR 1
 #define CLAMP(x, low, high)  (((x) > (high)) ? (high) : (((x) < (low)) ? (low) : (x)))
 
 //#define USE_SIGMOID 1
@@ -473,6 +474,7 @@ struct KickBass {
 	//Bezier::Bezier<3> *kickPitchBezier; 
 	biquad *bq;
 	biquad *bq2;
+	ripples::RipplesEngine engine;
 	KBVoltageControlledOscillator<KB_OVERSAMPLE, 16> oscillator;
 	KBVoltageControlledOscillator<KB_OVERSAMPLE, 16> oscillator2;
 	KBVoltageControlledOscillator<KB_OVERSAMPLE, 16> oscillator3;
@@ -522,6 +524,7 @@ struct KickBass {
 		bq2 = bq_new(LOWPASS, 5000, 1, 1.0, sample_rate);
 		bq_reset(bq);
 		bq_reset(bq2);
+		engine.setSampleRate(APP->engine->getSampleRate());
 	}
 
 	void Destroy() {
@@ -986,9 +989,35 @@ struct KickBass {
 			input = oscillator2.saw();
 			bq_update(bq, LOWPASS,logfreq, filterQ, 1.0, sample_rate);
 			bq_update(bq2, LOWPASS,logfreq, filterQ, 1.0, sample_rate);
-			out = bq_process(bq, input) * bassVel * sigmoidVel;
+			out = bq_process(bq, input) * bassVel;
 			//out = bq_process(bq, bq_process(bq2, input)) * bassVel * sigmoidVel;
-			outputs[BASS_RAW_OUT] = input * bassVel * sigmoidVel;
+			outputs[BASS_RAW_OUT] = input * bassVel;
+
+			/*
+			if (bassTicks < 20 || getBassPhase() > 0.99f) {
+				DEBUG("bt %i bp=%f saw=%f\n", bassTicks, getBassPhase(), input);
+			}
+			*/
+
+			//bq_update(bq, LOWPASS,logfreq, filterQ, 1.0, sample_rate);
+			//out = bq_process(bq, input) * bassVel * sigmoidVel;
+
+			ripples::RipplesEngine::Frame frame;
+			frame.res_knob = 0; //params[RES_PARAM].getValue();
+			frame.freq_knob = cutoffPhase * 0.9f; //rescale(logfreq, std::log2(ripples::kFreqKnobMin), std::log2(ripples::kFreqKnobMax), 0.f, 1.f);
+			frame.fm_knob = 0; //params[FM_PARAM].getValue();
+			frame.gain_cv_present = false; ///inputs[GAIN_INPUT].isConnected();
+
+
+			frame.res_cv = 0; //inputs[RES_INPUT].getPolyVoltage(c);
+                        //frame.freq_cv = cutoffPhase * 8.0f; //inputs[FREQ_INPUT].getPolyVoltage(c);
+                        frame.freq_cv = 0; //freq;
+                        frame.fm_cv = 0; //inputs[FM_INPUT].getPolyVoltage(c);
+                        frame.input = input;
+                        frame.gain_cv = 0;
+
+                        engine.process(frame);
+			out = frame.lp4 * bassVel;
 
 			outputs[BASS_OUT] = out;
 		}
