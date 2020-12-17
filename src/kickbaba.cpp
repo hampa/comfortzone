@@ -16,6 +16,7 @@ struct Kickbaba : Module {
 		MORPH_PARAM,
 		BASS_PITCH_PARAM,
 		SAW_PARAM,
+		BASS_PHASE_PARAM,
 		NUM_PARAMS
 	};
 	enum InputIds {
@@ -77,6 +78,7 @@ struct Kickbaba : Module {
 
 		configParam(MORPH_PARAM, 0.f, 1.f, 0.f, "");
 		configParam(BASS_PITCH_PARAM, 0.f, 1.f, 0.f, "");
+		configParam(BASS_PHASE_PARAM, 0.f, 1.f, 0.f, "");
 		configParam(SAW_PARAM, 0.f, 1.f, 0.f, "");
 
 	}
@@ -107,6 +109,7 @@ struct Kickbaba : Module {
 		float resParam = params[RES_PARAM].getValue();
 		float morphParam = params[MORPH_PARAM].getValue();
 		float bassPitchParam = params[BASS_PITCH_PARAM].getValue();
+		float bassPhaseParam= params[BASS_PHASE_PARAM].getValue();
 		float sawParam = params[SAW_PARAM].getValue();
 		float kickPitchMinParam = params[KICKPITCHMIN_PARAM].getValue();
 		float kickPitchMaxParam = params[KICKPITCHMAX_PARAM].getValue();
@@ -122,7 +125,8 @@ struct Kickbaba : Module {
 				kickPitchMinParam,
 				kickPitchMaxParam,
 				bassVelParam,
-				bassPitchParam);
+				bassPitchParam,
+				bassPhaseParam);
 
 		outputs[KICK_OUTPUT].setVoltage(kickBass.outputs[KickBass::KICK_OUT] * 5.0f);
 		outputs[BASS_OUTPUT].setVoltage(kickBass.outputs[KickBass::BASS_OUT]);
@@ -182,7 +186,8 @@ struct KickbabaWidget : ModuleWidget {
 		addParam(createParam<RoundBlackKnob>(Vec(x1, y), module, Kickbaba::SAW_PARAM));
 		addParam(createParam<RoundBlackKnob>(Vec(x2, y), module, Kickbaba::MORPH_PARAM));
 		addParam(createParam<RoundBlackKnob>(Vec(x3, y), module, Kickbaba::FREQ_PARAM));
-		addParam(createParam<RoundBlackKnob>(Vec(x4, y), module, Kickbaba::RES_PARAM));
+		//addParam(createParam<RoundBlackKnob>(Vec(x4, y), module, Kickbaba::RES_PARAM));
+		addParam(createParam<RoundBlackKnob>(Vec(x4, y), module, Kickbaba::BASS_PHASE_PARAM));
 		addParam(createParam<RoundBlackKnob>(Vec(x5, y), module, Kickbaba::BASSVEL1_PARAM));
 
 		int iow = 34;

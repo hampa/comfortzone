@@ -25,7 +25,7 @@ float CLAMP(float x, float upper, float lower)
 //#define WITH_DECIMATOR 1
 #define CLAMP(x, low, high)  (((x) > (high)) ? (high) : (((x) < (low)) ? (low) : (x)))
 
-//#define USE_SIGMOID 1
+#define USE_SIGMOID 1
 
 template <int OVERSAMPLE, int QUALITY>
 struct KBVoltageControlledOscillator {
@@ -52,6 +52,7 @@ struct KBVoltageControlledOscillator {
 	float additiveBuffer[KB_OVERSAMPLE] = {};
 
 	float waveTable[2] = { 1.0, -1.0f };
+	float phaseOffset;
 
 	void setPitch(float octave, float pitchKnob, float pitchCv, float freqOffset) {
 		// Compute frequency
@@ -404,7 +405,7 @@ struct KBVoltageControlledOscillator {
 		sqrDecimator.reset();
 		pulseDecimator.reset();
 #endif
-		phase = 0;	 
+		phase = phaseOffset;	 
 	} 
 
 	static double log_freq_func (double w0, double w1, double indx)
@@ -690,6 +691,8 @@ struct KickBass {
 
 	// 0 to 1
 	float getBassGraph(float t) {
+		t += oscillator2.phaseOffset;
+		t = oscillator2.kbEucMod(t, 1.0f);
 		t = CLAMP(t, 0.0f, 1.0f);
 		float c = oscillator2.getSaw(t);
 		return map(c, -1.0f, 1.0f, 0.0f, 1.0f);
@@ -771,7 +774,7 @@ struct KickBass {
 	//float morph;
 	void process(float sample_time, float _sample_rate, bool clk, bool rst, float _x1, float _y1, float _x2, float _y2, 
 			float pitchVoltageParam, float freqParam, float resParam, float sawParam, float morphParam, float kickPitchMinParam,
-			float kickPitchMaxParam, float bassVelocity, float bassPitchParam) {
+			float kickPitchMaxParam, float bassVelocity, float bassPitchParam, float bassPhaseParam) {
 		x1 = _x1 * 0.25f;
 		x1 = _x1 * 0.25f;
 		y1 = _y1 * 0.5f;
@@ -782,6 +785,7 @@ struct KickBass {
 		sample_rate = floor(_sample_rate);
 		//wavetable = wavetableParam; 
 		sawType = floorf(sawParam * 5.0f);
+		oscillator2.phaseOffset = bassPhaseParam;
 		/*
 		bool useMorph = false;
 		if (wavetable >= 0.5f) {
@@ -826,6 +830,7 @@ struct KickBass {
 			gateTrigger = true;
 			kickRepeats = 0;
 			kickDelta = 0;
+			oscillator2.resetPhase();
 		}
 
 		pitchVoltageParam = CLAMP(pitchVoltageParam, -4.f, 4.f);
@@ -840,7 +845,7 @@ struct KickBass {
 			outputs[LFO_OUT] = 0;	
 		}
 		// 1 ms trigger
-		outputs[START_OUT] = (bar == 0 && ticks <= (sample_rate * 0.01f));
+		outputs[START_OUT] = (lfoTicks <= (sample_rate * 0.01f));
 
 		float kickPhase = getKickPhase12();
 		if (haveNoteOn) {
@@ -885,6 +890,7 @@ struct KickBass {
 			//kickFreqMin = oscillator.getPitchFreq(octave, kickVoltageMin, 0, 0);
 
 			if (ticks == 0) {
+				// phase start at 1?
 				oscillator.resetPhase();
 			}
 			oscillator.freq = kickFreqLerp;
@@ -1006,9 +1012,9 @@ struct KickBass {
 			oscillator2.morph = morph;
 			oscillator2.processSaw(sample_time);
 			input = oscillator2.saw();
-			bq_update(bq, LOWPASS,logfreq, filterQ, 1.0, sample_rate);
-			bq_update(bq2, LOWPASS,logfreq, filterQ, 1.0, sample_rate);
-			out = bq_process(bq, input) * bassVel;
+			//bq_update(bq, LOWPASS,logfreq, filterQ, 1.0, sample_rate);
+			//bq_update(bq2, LOWPASS,logfreq, filterQ, 1.0, sample_rate);
+			//out = bq_process(bq, input) * bassVel;
 			//out = bq_process(bq, bq_process(bq2, input)) * bassVel * sigmoidVel;
 			outputs[BASS_RAW_OUT] = input * bassVel;
 
@@ -1030,15 +1036,28 @@ struct KickBass {
 			frame.gain_cv_present = false; ///inputs[GAIN_INPUT].isConnected();
 
 
+			float voltageInput = input * 5.0f * bassVel;
+
 			frame.res_cv = 0; //inputs[RES_INPUT].getPolyVoltage(c);
                         //frame.freq_cv = cutoffPhase * 8.0f; //inputs[FREQ_INPUT].getPolyVoltage(c);
                         frame.freq_cv = cutoffPhase * 8.0f;
                         frame.fm_cv = 0; //inputs[FM_INPUT].getPolyVoltage(c);
-                        frame.input = input * 5.0f;
+                        frame.input = voltageInput; 
                         frame.gain_cv = 0;
 
                         engine.process(frame);
-			out = frame.lp4 * bassVel;
+			out = frame.lp4;
+
+			/*
+			float transient = freqParam * 100.0f;
+			if (bassTicks < transient && transient > 1.0f) {
+				float p = bassTicks / transient;	
+				out = lerp(voltageInput, out, p); 
+			}
+			else {
+				outputs[BASS_OUT] = out;
+			}
+			*/
 
 			outputs[BASS_OUT] = out;
 		}
