@@ -147,7 +147,7 @@ struct Kickbaba : Module {
 };
 
 
-//#define WITH_10HP 1
+#define WITH_10HP 1
 struct KickbabaWidget : ModuleWidget {
 	Label* label; 
 	KickbabaWidget(Kickbaba* module) {
@@ -178,17 +178,19 @@ struct KickbabaWidget : ModuleWidget {
 		addParam(createParam<RoundBlackKnob>(Vec(x1, y), module, Kickbaba::KICKPITCHMAX_PARAM));
 		addParam(createParam<RoundBlackKnob>(Vec(x2, y), module, Kickbaba::KICKPITCH_X1_PARAM));
 		addParam(createParam<RoundBlackKnob>(Vec(x3, y), module, Kickbaba::KICKPITCH_Y1_PARAM));
-		addParam(createParam<RoundBlackKnob>(Vec(x4, y), module, Kickbaba::KICKPITCH_X2_PARAM));
+
+		addParam(createParam<RoundBlackKnob>(Vec(x4 + 100, y), module, Kickbaba::KICKPITCH_X2_PARAM));
 
 		// bass
 		y = 205;
 		addParam(createParam<RoundBlackKnob>(Vec(x0, y), module, Kickbaba::BASS_PITCH_PARAM));
 		addParam(createParam<RoundBlackKnob>(Vec(x1, y), module, Kickbaba::SAW_PARAM));
 		addParam(createParam<RoundBlackKnob>(Vec(x2, y), module, Kickbaba::MORPH_PARAM));
-		addParam(createParam<RoundBlackKnob>(Vec(x3, y), module, Kickbaba::FREQ_PARAM));
+		addParam(createParam<RoundBlackKnob>(Vec(x3, y), module, Kickbaba::BASSVEL1_PARAM));
+
+		addParam(createParam<RoundBlackKnob>(Vec(x3 + 100, y), module, Kickbaba::FREQ_PARAM));
 		//addParam(createParam<RoundBlackKnob>(Vec(x4, y), module, Kickbaba::RES_PARAM));
-		addParam(createParam<RoundBlackKnob>(Vec(x4, y), module, Kickbaba::BASS_PHASE_PARAM));
-		addParam(createParam<RoundBlackKnob>(Vec(x5, y), module, Kickbaba::BASSVEL1_PARAM));
+		addParam(createParam<RoundBlackKnob>(Vec(x4 + 100, y), module, Kickbaba::BASS_PHASE_PARAM));
 
 		int iow = 34;
 		int iox0 = 12;
@@ -202,29 +204,32 @@ struct KickbabaWidget : ModuleWidget {
 		int iox8 = iox7 + iow;
 
 		y = 268;
-		addInput(createInput<PJ301MPort>(Vec(iox0, y), module, Kickbaba::PITCH_INPUT));
-		addInput(createInput<PJ301MPort>(Vec(iox1, y), module, Kickbaba::CLOCK_INPUT));
-		addInput(createInput<PJ301MPort>(Vec(iox2, y), module, Kickbaba::RESET_INPUT));
+		addInput(createInput<PJ301MPort>(Vec(iox0, y), module, Kickbaba::RESET_INPUT));
+		addOutput(createOutput<PJ301MPort>(Vec(iox1, y), module, Kickbaba::START_OUTPUT));
+		addOutput(createOutput<PJ301MPort>(Vec(iox2, y), module, Kickbaba::LFO_OUTPUT));
+		addOutput(createOutput<PJ301MPort>(Vec(iox3, y), module, Kickbaba::GATE_OUTPUT));
 
 		y = 320;
-		addOutput(createOutput<PJ301MPort>(Vec(iox0, y), module, Kickbaba::START_OUTPUT));
-		addOutput(createOutput<PJ301MPort>(Vec(iox1, y), module, Kickbaba::GATE_OUTPUT));
-		addOutput(createOutput<PJ301MPort>(Vec(iox2, y), module, Kickbaba::LFO_OUTPUT));
-		addOutput(createOutput<PJ301MPort>(Vec(iox3, y), module, Kickbaba::KICK_OUTPUT));
-		addOutput(createOutput<PJ301MPort>(Vec(iox4, y), module, Kickbaba::BASS_OUTPUT));
+		addInput(createInput<PJ301MPort>(Vec(iox0, y), module, Kickbaba::CLOCK_INPUT));
+		addInput(createInput<PJ301MPort>(Vec(iox1, y), module, Kickbaba::PITCH_INPUT));
+		addOutput(createOutput<PJ301MPort>(Vec(iox2, y), module, Kickbaba::KICK_OUTPUT));
+		addOutput(createOutput<PJ301MPort>(Vec(iox3, y), module, Kickbaba::BASS_OUTPUT));
 
+			/*
 		addOutput(createOutput<PJ301MPort>(Vec(iox5, y), module, Kickbaba::BASS_ENV_OUTPUT));
 		addOutput(createOutput<PJ301MPort>(Vec(iox6, y), module, Kickbaba::BASS_RAW_OUTPUT));
 		addOutput(createOutput<PJ301MPort>(Vec(iox7, y), module, Kickbaba::PITCH_ENV_OUTPUT));
 		addOutput(createOutput<PJ301MPort>(Vec(iox8, y), module, Kickbaba::PITCH_OUTPUT));
+			*/
 
 		
 
-
+		/*
 		addChild(createLightCentered<MediumLight<RedLight>>(mm2px(Vec(131.125, 68.642)), module, Kickbaba::LIGHT0_LIGHT));
 		addChild(createLightCentered<MediumLight<RedLight>>(mm2px(Vec(149.324, 68.642)), module, Kickbaba::LIGHT1_LIGHT));
 		addChild(createLightCentered<MediumLight<RedLight>>(mm2px(Vec(166.825, 68.642)), module, Kickbaba::LIGHT2_LIGHT));
 		addChild(createLightCentered<MediumLight<RedLight>>(mm2px(Vec(183.979, 70.034)), module, Kickbaba::LIGHT3_LIGHT));
+		*/
 
 
 		// RACK_GRID_WIDTH (px / HP)
@@ -261,7 +266,7 @@ struct KickbabaWidget : ModuleWidget {
 		if (module == NULL) {
 			return;
 		}
-		drawGraph(args.vg, 0, 30, RACK_GRID_WIDTH * 12, 60, 1.0f);
+		drawGraph(args.vg, 0, 30, RACK_GRID_WIDTH * 10, 60, 1.0f);
 	}
 
 	const int graphResolution = 50;

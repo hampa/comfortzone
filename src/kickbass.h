@@ -1,7 +1,6 @@
 #ifndef KICKBASS_H
 #define KICKBASS_H 1
 
-#include "biquad.h"
 #include "ripples.hpp"
 #include <stdlib.h>
 #include <stdio.h>
@@ -116,7 +115,6 @@ struct KBVoltageControlledOscillator {
 		pw = CLAMP(pulseWidth, pwMin, 1.0f - pwMin);
 	}
 
-
 	float lerp(float a, float b, float f) {
 		return (a * (1.0 - f)) + (b * f);
 	}
@@ -162,7 +160,6 @@ struct KBVoltageControlledOscillator {
 		float phase2 = phase * 2.0f - 1.0f;
 		switch (sawType) {
 			case 0:
-				//phase2 = fmod(phase + morph, 1.0f);
 				return lerp(1.0f, -1.0f, phase);
 			case 1:
 				factor = lerp(1.0, 2.0f, morph);
@@ -170,7 +167,6 @@ struct KBVoltageControlledOscillator {
 			case 2:
 				return -sinf(morph * M_PI + ((phase * 2.0f - 1.0f)) * M_PI * 0.5f);
 			case 3:
-				//factor = lerp(0.635f, 1.4f, morph);
 				factor = lerp(0, 1.4f, morph);
 				return -(phase2 - (factor * sinf(phase2 * M_PI)));
 			case 4:
@@ -446,11 +442,9 @@ struct KBVoltageControlledOscillator {
 #else
 	float sin() {
 		return sinBuffer[0];
-		//return sinDecimator.process(sinBuffer);
 	}
 	float saw() {
 		return sawBuffer[0];
-		//return sawDecimator.process(sawBuffer);
 	}
 
 	float fmSaw() {
@@ -458,7 +452,6 @@ struct KBVoltageControlledOscillator {
 	}
 	float sqr() {
 		return sqrBuffer[0];
-		//return sqrDecimator.process(sqrBuffer);
 	}
 	float additive() {
 		return additiveBuffer[0];	
@@ -466,7 +459,6 @@ struct KBVoltageControlledOscillator {
 
 	float pulse() {
 		return pulseBuffer[0];
-		//return pulseDecimator.process(pulseBuffer);	
 	}
 #endif
 
@@ -477,9 +469,6 @@ struct KBVoltageControlledOscillator {
 
 
 struct KickBass {
-	//Bezier::Bezier<3> *kickPitchBezier; 
-	biquad *bq;
-	biquad *bq2;
 	ripples::RipplesEngine engine;
 	KBVoltageControlledOscillator<KB_OVERSAMPLE, 16> oscillator;
 	KBVoltageControlledOscillator<KB_OVERSAMPLE, 16> oscillator2;
@@ -521,35 +510,15 @@ struct KickBass {
 	int bar = 0;
 	int noteOnTick = 0;
 	int haveNoteOn = 0;
-	//float wavetable;
 	float morph;
 	int sample_rate = 44100;
 
 
 	void Init() {
-		//kickPitchBezier = new Bezier::Bezier<3>({ {0, 1}, {0.5, 0.5}, {0, 0}, {1, 0}});
-		bq = bq_new(LOWPASS, 5000, 1, 1.0, sample_rate);
-		bq2 = bq_new(LOWPASS, 5000, 1, 1.0, sample_rate);
-		bq_reset(bq);
-		bq_reset(bq2);
 		engine.setSampleRate(APP->engine->getSampleRate());
 	}
 
 	void Destroy() {
-		/*
-		if (kickPitchBezier != NULL) {
-			delete kickPitchBezier; 
-			kickPitchBezier = NULL;
-		}
-		*/
-		if (bq != NULL) {
-			bq_destroy(bq);
-			bq = NULL;
-		}
-		if (bq2 != NULL) {
-			bq_destroy(bq2);
-			bq2 = NULL;
-		}
 	}
 
 	float sawFunc(float pos)
@@ -773,7 +742,7 @@ struct KickBass {
 	float sigmoid = 0;
 	float kickDelta;
 	int sawType;
-	//float morph;
+
 	void process(float sample_time, float _sample_rate, bool clk, bool rst, float _x1, float _y1, float _x2, float _y2, 
 			float pitchVoltageParam, float freqParam, float resParam, float sawParam, float morphParam, float kickPitchMinParam,
 			float kickPitchMaxParam, float bassVelocity, float bassPitchParam, float bassPhaseParam) {
@@ -875,9 +844,6 @@ struct KickBass {
 			kickVoltageMax = oscillator.getVoltageFromNote(24.0f + kickFreqMaxNote); 
 			kickVoltageMin = oscillator.getVoltageFromNote(kickFreqMinNote - 36.0f);
 
-			//DEBUG("%f %f", kickPitchMinParam, kickPitchMaxParam);
-			//float kickVoltageMax = pitchVoltage + 4.0f; //kickVoltageMin + 2 + kickPitchMax * 8.0f;
-			//kickVoltageMax = CLAMP(kickVoltageMax, -8.0f, 10.0f);
 
 #ifdef USE_SIGMOID
 			float kickPitch = 1.0f - getSigmoid(kickPhase, sigmoid);
@@ -888,21 +854,13 @@ struct KickBass {
 			float kickFreqLerp = lerp(kickFreqMin, kickFreqMax, kickPitch);
 			float kickVoltageLerp = lerp(kickVoltageMin, kickVoltageMax, kickPitch);
 
-			// for display
-			//kickFreqMax = oscillator.getPitchFreq(octave, kickVoltageMax, 0, 0);
-			//kickFreqMin = oscillator.getPitchFreq(octave, kickVoltageMin, 0, 0);
-
 			if (ticks == 0) {
 				// phase start at 1?
 				oscillator.resetPhase();
 			}
 			oscillator.freq = kickFreqLerp;
 			outputs[PITCH_OUT] = kickVoltageLerp;
-			//oscillator.setPitchQ(octave, kickVoltageLerp, 0, 0);
 			oscillator.process(sample_time);
-			//outputs[KICK_OUT] = oscillator.sin();
-			//outputs[KICK_OUT] = oscillator.getChirpRange(440.0f, 440.0f, 1.0f, kickPhase, sigmoid) * kickAmp;
-			//outputs[KICK_OUT] = oscillator.getChirpRange(440.0f, 440.0f, 1.0f, kickDelta, sigmoid) * kickAmp;
 			float kickLength = getKickLength12(); 
 			float kickLength16 = getKickLength16Note();
 			float duration = kickLength / 44100.0f;
@@ -910,27 +868,6 @@ struct KickBass {
 			oscillator3.setPitchQ(0, 0, 0, 0);
 			float factor = _x1 * 10.0f + 1.0f;
 
-			if (ticks == 0) {	
-				/*
-				for (float xx = 0; xx < M_PI; xx += 0.1f) {	
-					float ph = oscillator3.processSweep(xx, 440.0f*5, 220.0f * 0.25f, kickLength/44100.0f, kickLength, kickLength, 1, factor);
-					DEBUG("offset %f phase %f", xx, ph);
-				}
-				*/
-				phase_offset = M_PI - oscillator3.processSweep(0, 440.0f*5, 220.0f * 0.25f, kickLength/44100.0f, kickLength, kickLength16, 1, factor);
-				float ph0 = oscillator3.processSweep(phase_offset, 440.0f*5, 220.0f * 0.25f, kickLength/44100.0f, kickLength, kickLength16 + 1, 1, factor);
-				float ph1 = oscillator3.processSweep(phase_offset, 440.0f*5, 220.0f * 0.25f, kickLength/44100.0f, kickLength, kickLength16, 1, factor);
-				//DEBUG("phase_offset = %f ph0 %f ph1 %f", phase_offset, ph0, ph1);
-			}
-
-			//oscillator3.processSweep(phase_offset, 440.0f*5, 220.0f * 0.25f, kickLength/44100.0f, kickLength, ticks, 1, factor);
-			
-			//oscillator3.processSweep(440.0f, 439.0f, kickLength/44100.0f, kickLength, ticks);
-			//oscillator3.processChirp(ticks, 2, -4, kickPhase);
-			//oscillator3.processSin(ticks, 2, -2, kickPhase);
-			//oscillator3.sweep(ticks, 2, 1, kickLength);
-			//outputs[KICK_OUT] = oscillator3.sin() * kickAmp;
-			//outputs[KICK_OUT] = oscillator3.sin() * kickAmp;
 			outputs[KICK_OUT] = oscillator.sin() * kickAmp;
 
 			kickDelta += sample_time;
@@ -959,109 +896,38 @@ struct KickBass {
 			oscillator2.freq = bassFreq;
 			oscillator2.sawType = sawType;
 
-				
 			if (note16 == 1) {
-				//DEBUG("%f %f", bassPitch, bassPitchCV);
-				//oscillator2.setPitchQ(bassOctave, bassPitch, bassPitchCV, 0);
 				bassVel = bassVelocity;
 				if (bassTicks == 0) {
 					kickPhaseAtFirstBass = oscillator.lastUsedPhase;
 				}
 			}
-			/*
-			else if (note16 == 2) {
-				oscillator2.setPitchQ(bassOctave, bassPitch, bassPitchCV, 0);
-			}
-			else if (note16 == 3) {
-				oscillator2.setPitchQ(bassOctave, bassPitch, bassPitchCV, 0);
-			}
-			*/
-			//oscillator2.wavetable = wavetable;
 
 			float sigmoidVel = 1.0f - getSigmoid(getBassPhase(), 0.9f); 
 			float input = 0;
 			float out = 0;
-			/*
-			if (useMorph) {
-				oscillator2.processPulse(sample_time);
-				input = oscillator2.pulse();
-				bq_update(bq, LOWPASS,logfreq, filterQ, 1.0, sample_rate);
-				out = bq_process(bq, input) * bassVel * sigmoidVel;
-			}
-			else {
-				//float fmMod = filterRes;
-				if (wavetable < 0.1f) {
-					//oscillator2.processFmSaw(sample_time, cutoffPhase, 0);
-					oscillator2.processFmSaw(sample_time, 1.0f, 0);
-					//oscillator2.processLerp(sample_time, cutoffPhase);
-					//out = input = oscillator2.fmSaw() * bassVel * cutoffPhase;;
-					input = oscillator2.fmSaw();
-					bq_update(bq, LOWPASS, logfreq, filterQ, 1.0, sample_rate);
-					out = bq_process(bq, input) * bassVel * sigmoidVel;
-				}
-				else if (wavetable < 0.2f) {
-					oscillator2.processAdditive(sample_time, cutoffPhase * freq * 32.0f, powf(filterRes, 2));
-					out = input = oscillator2.additive() * bassVel;
-				}
-				else {
-					oscillator2.processSaw(sample_time);
-					input = oscillator2.saw();
-					bq_update(bq, LOWPASS,logfreq, filterQ, 1.0, sample_rate);
-					out = bq_process(bq, input) * bassVel * sigmoidVel;
-				}
-			}
-			*/
 			oscillator2.sawType = sawType;
 			oscillator2.morph = morph;
 			oscillator2.processSaw(sample_time);
 			input = oscillator2.saw();
-			//bq_update(bq, LOWPASS,logfreq, filterQ, 1.0, sample_rate);
-			//bq_update(bq2, LOWPASS,logfreq, filterQ, 1.0, sample_rate);
-			//out = bq_process(bq, input) * bassVel;
-			//out = bq_process(bq, bq_process(bq2, input)) * bassVel * sigmoidVel;
 			outputs[BASS_RAW_OUT] = input * bassVel;
 
-			/*
-			if (bassTicks < 20 || getBassPhase() > 0.99f) {
-				DEBUG("bt %i bp=%f saw=%f\n", bassTicks, getBassPhase(), input);
-			}
-			*/
-
-			//bq_update(bq, LOWPASS,logfreq, filterQ, 1.0, sample_rate);
-			//out = bq_process(bq, input) * bassVel * sigmoidVel;
-
 			ripples::RipplesEngine::Frame frame;
-			frame.res_knob = 0; //params[RES_PARAM].getValue();
-			frame.freq_knob = 0; //rescale(freqParam, std::log2(ripples::kFreqKnobMin), std::log2(ripples::kFreqKnobMax), 0.f, 1.f);
-			//DEBUG("param %f knob %f\n", freqParam, frame.freq_knob);
-			//frame.freq_knob = cutoffPhase; //rescale(logfreq, std::log2(ripples::kFreqKnobMin), std::log2(ripples::kFreqKnobMax), 0.f, 1.f);
-			frame.fm_knob = 1.0f; //params[FM_PARAM].getValue();
-			frame.gain_cv_present = false; ///inputs[GAIN_INPUT].isConnected();
-
+			frame.res_knob = 0;
+			frame.freq_knob = 0;
+			frame.fm_knob = 1.0f;
+			frame.gain_cv_present = false;
 
 			float voltageInput = input * 5.0f * bassVel;
 
-			frame.res_cv = 0; //inputs[RES_INPUT].getPolyVoltage(c);
-                        //frame.freq_cv = cutoffPhase * 8.0f; //inputs[FREQ_INPUT].getPolyVoltage(c);
+			frame.res_cv = 0; 
                         frame.freq_cv = cutoffPhase * 8.0f;
-                        frame.fm_cv = 0; //inputs[FM_INPUT].getPolyVoltage(c);
+                        frame.fm_cv = 0;
                         frame.input = voltageInput; 
                         frame.gain_cv = 0;
 
                         engine.process(frame);
 			out = frame.lp4;
-
-			/*
-			float transient = freqParam * 100.0f;
-			if (bassTicks < transient && transient > 1.0f) {
-				float p = bassTicks / transient;	
-				out = lerp(voltageInput, out, p); 
-			}
-			else {
-				outputs[BASS_OUT] = out;
-			}
-			*/
-
 			outputs[BASS_OUT] = out;
 		}
 		else {
@@ -1085,8 +951,6 @@ struct KickBass {
 			return;
 		}
 		lfoTicks++;
-
-		//int len = (int)floor(length/4.0f);
 
 		int nextTick = floor(ticksPerClock / 16.0f);
 		if (nextTick == 0)
@@ -1116,10 +980,6 @@ struct KickBass {
 			sawPhase = -1;
 
 			oscillator2.resetPhase();
-			if (bq != NULL) {
-				bq_reset(bq);
-				bq_reset(bq2);
-			}
 		}
 	}
 };
