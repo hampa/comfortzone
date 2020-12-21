@@ -197,21 +197,28 @@ struct KickbabaWidget : ModuleWidget {
 		int iox3 = iox2 + iow;
 		int iox4 = iox3 + iow;
 		int iox5 = iox4 + iow;
+		int iox6 = iox5 + iow;
+		int iox7 = iox6 + iow;
+		int iox8 = iox7 + iow;
 
-		addInput(createInput<PJ301MPort>(Vec(iox0, 268), module, Kickbaba::RESET_INPUT));
-		addOutput(createOutput<PJ301MPort>(Vec(iox1, 268), module, Kickbaba::START_OUTPUT));
-		addOutput(createOutput<PJ301MPort>(Vec(iox2, 268), module, Kickbaba::GATE_OUTPUT));
-		addOutput(createOutput<PJ301MPort>(Vec(iox3, 268), module, Kickbaba::LFO_OUTPUT));
-		addOutput(createOutput<PJ301MPort>(Vec(iox4, 268), module, Kickbaba::BASS_ENV_OUTPUT));
-		addOutput(createOutput<PJ301MPort>(Vec(iox5, 268), module, Kickbaba::BASS_RAW_OUTPUT));
+		y = 268;
+		addInput(createInput<PJ301MPort>(Vec(iox0, y), module, Kickbaba::PITCH_INPUT));
+		addInput(createInput<PJ301MPort>(Vec(iox1, y), module, Kickbaba::CLOCK_INPUT));
+		addInput(createInput<PJ301MPort>(Vec(iox2, y), module, Kickbaba::RESET_INPUT));
 
-		// input output
-		addInput(createInput<PJ301MPort>(Vec(iox0, 320), module, Kickbaba::CLOCK_INPUT));
-		addInput(createInput<PJ301MPort>(Vec(iox1, 320), module, Kickbaba::PITCH_INPUT));
-		addOutput(createOutput<PJ301MPort>(Vec(iox2, 320), module, Kickbaba::KICK_OUTPUT));
-		addOutput(createOutput<PJ301MPort>(Vec(iox3, 320), module, Kickbaba::BASS_OUTPUT));
-		addOutput(createOutput<PJ301MPort>(Vec(iox4, 320), module, Kickbaba::PITCH_ENV_OUTPUT));
-		addOutput(createOutput<PJ301MPort>(Vec(iox5, 320), module, Kickbaba::PITCH_OUTPUT));
+		y = 320;
+		addOutput(createOutput<PJ301MPort>(Vec(iox0, y), module, Kickbaba::START_OUTPUT));
+		addOutput(createOutput<PJ301MPort>(Vec(iox1, y), module, Kickbaba::GATE_OUTPUT));
+		addOutput(createOutput<PJ301MPort>(Vec(iox2, y), module, Kickbaba::LFO_OUTPUT));
+		addOutput(createOutput<PJ301MPort>(Vec(iox3, y), module, Kickbaba::KICK_OUTPUT));
+		addOutput(createOutput<PJ301MPort>(Vec(iox4, y), module, Kickbaba::BASS_OUTPUT));
+
+		addOutput(createOutput<PJ301MPort>(Vec(iox5, y), module, Kickbaba::BASS_ENV_OUTPUT));
+		addOutput(createOutput<PJ301MPort>(Vec(iox6, y), module, Kickbaba::BASS_RAW_OUTPUT));
+		addOutput(createOutput<PJ301MPort>(Vec(iox7, y), module, Kickbaba::PITCH_ENV_OUTPUT));
+		addOutput(createOutput<PJ301MPort>(Vec(iox8, y), module, Kickbaba::PITCH_OUTPUT));
+
+		
 
 
 		addChild(createLightCentered<MediumLight<RedLight>>(mm2px(Vec(131.125, 68.642)), module, Kickbaba::LIGHT0_LIGHT));

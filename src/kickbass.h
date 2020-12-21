@@ -25,7 +25,7 @@ float CLAMP(float x, float upper, float lower)
 //#define WITH_DECIMATOR 1
 #define CLAMP(x, low, high)  (((x) > (high)) ? (high) : (((x) < (low)) ? (low) : (x)))
 
-#define USE_SIGMOID 1
+//#define USE_SIGMOID 1
 
 template <int OVERSAMPLE, int QUALITY>
 struct KBVoltageControlledOscillator {
@@ -146,7 +146,7 @@ struct KBVoltageControlledOscillator {
    		float res;
 		float curve = (time * time * time);
 		//float curve = 1.0f - getSigmoid(time, sigmoid);
-   		res=sinf(w1 * time + (w2 - w1) * curve/(2.0f * M_PI));
+   		res=sinf(w1 * time + (w2 - w1) * curve / (2.0f * M_PI));
    		//res=sinf(2.f * M_PI *
    		return res;
 	}
@@ -162,12 +162,13 @@ struct KBVoltageControlledOscillator {
 		float phase2 = phase * 2.0f - 1.0f;
 		switch (sawType) {
 			case 0:
+				//phase2 = fmod(phase + morph, 1.0f);
 				return lerp(1.0f, -1.0f, phase);
 			case 1:
 				factor = lerp(1.0, 2.0f, morph);
 				return -2.0f * (sinf((phase * factor) *M_PI * 0.5f) - 0.5f);
 			case 2:
-				return -sinf((phase * 2.0f - 1.0f) * M_PI * 0.5f);
+				return -sinf(morph * M_PI + ((phase * 2.0f - 1.0f)) * M_PI * 0.5f);
 			case 3:
 				//factor = lerp(0.635f, 1.4f, morph);
 				factor = lerp(0, 1.4f, morph);
@@ -617,9 +618,10 @@ struct KickBass {
 
 	char *getBarInfo() {
 		static char barInfo[64] = "";
-		snprintf(barInfo, sizeof(barInfo), "%i %.2f",
+		snprintf(barInfo, sizeof(barInfo), "%i %.2f %.2f",
 				bar,
-				outputs[LFO_OUT]);
+				outputs[LFO_OUT],
+				outputs[START_OUT]);
 		barInfo[20] = '\0';
 		return barInfo;
 	}
@@ -780,7 +782,7 @@ struct KickBass {
 		y1 = _y1 * 0.5f;
 		x2 = _x2;
 		y2 = _y2;
-		sigmoid = -_x1;
+		sigmoid = lerp(-0.99f, -0.5f, _x1);
 		gateTrigger = false;
 		sample_rate = floor(_sample_rate);
 		//wavetable = wavetableParam; 
@@ -840,12 +842,13 @@ struct KickBass {
 		outputs[GATE_OUT] = (bar == 15);
 		if (haveClockCycle) {
 			outputs[LFO_OUT] = lfoTicks / (float)(ticksPerClock * 16.0f);
+			float so = lfoTicks / (float)(ticksPerClock * 15.0f);
+			outputs[START_OUT] = CLAMP(1.f - so, 0.f, 1.f); 
 		}
 		else {
-			outputs[LFO_OUT] = 0;	
+			outputs[LFO_OUT] = 0;
+			outputs[START_OUT] = 1.f;
 		}
-		// 1 ms trigger
-		outputs[START_OUT] = (lfoTicks <= (sample_rate * 0.01f));
 
 		float kickPhase = getKickPhase12();
 		if (haveNoteOn) {
