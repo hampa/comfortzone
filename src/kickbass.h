@@ -154,25 +154,23 @@ struct KBVoltageControlledOscillator {
     		return sinf(phase + phi0);
    	}
 
-	int sawType = 4;
+	int sawType = 0;
 	float getSaw(float phase) {
 		float factor;
 		float phase2 = phase * 2.0f - 1.0f;
 		switch (sawType) {
 			case 0:
-				return lerp(1.0f, -1.0f, phase);
+				factor = lerp(0, 1.4f, morph);
+				return -(phase2 - (factor * sinf(phase2 * M_PI)));
 			case 1:
 				factor = lerp(1.0, 2.0f, morph);
 				return -2.0f * (sinf((phase * factor) *M_PI * 0.5f) - 0.5f);
 			case 2:
 				return -sinf(morph * M_PI + ((phase * 2.0f - 1.0f)) * M_PI * 0.5f);
 			case 3:
-				factor = lerp(0, 1.4f, morph);
-				return -(phase2 - (factor * sinf(phase2 * M_PI)));
-			case 4:
 				factor = lerp(0.1f, 0.9f, morph);
 				return sinf(M_PI * factor * factor * 32.0f * logf(phase + 0.0001f));
-			case 5:
+			case 4:
 				return getChirp(phase, morph);
 		}
 		return lerp(1.0f, -1.0f, phase);
@@ -600,26 +598,35 @@ struct KickBass {
 		return notes[i % 12];
 	}
 
+	const char *getBassNoteName() {
+		return getNoteName(bassNote);
+	}
+
+	const char *getKickNoteName() {
+		return getNoteName(kickFreqMinNote);
+	}
+
+	const char *getKickSweepNoteName() {
+		return getNoteName(kickFreqMaxNote);
+	}
+
 	char *getBassInfo() {
 		static char bassInfo[64] = "";
-		snprintf(bassInfo, sizeof(bassInfo), "%.2fhz %i %s %.1fQ",
+		snprintf(bassInfo, sizeof(bassInfo), "%.2fhz %i %s",
 				bassFreq,
 				bassNote,
-				getNoteName(bassNote),
-				filterQ);
+				getNoteName(bassNote));
 		bassInfo[20] = '\0';
 		return bassInfo;
 	}
 
 	char *getKickInfo() {
 		static char kickInfo[64] = "";
-		snprintf(kickInfo, sizeof(kickInfo), "%.0fhz %s %.1fv %.0fhz %s %.1fv %.3fP",
+		snprintf(kickInfo, sizeof(kickInfo), "%.0fhz %s %.0fhz %s %.2fP",
 				floor(kickFreqMin),
 				getNoteName(kickFreqMinNote),
-				kickVoltageMin,
 				floor(kickFreqMax),
 				getNoteName(kickFreqMaxNote),
-				kickVoltageMax,
 				kickPhaseAtFirstBass);
 		kickInfo[63] = '\0';	
 		return kickInfo;
@@ -755,7 +762,7 @@ struct KickBass {
 		gateTrigger = false;
 		sample_rate = floor(_sample_rate);
 		//wavetable = wavetableParam; 
-		sawType = floorf(sawParam * 5.0f);
+		sawType = floorf(sawParam * 4.0f);
 		oscillator2.phaseOffset = bassPhaseParam;
 		/*
 		bool useMorph = false;
@@ -903,7 +910,6 @@ struct KickBass {
 				}
 			}
 
-			float sigmoidVel = 1.0f - getSigmoid(getBassPhase(), 0.9f); 
 			float input = 0;
 			float out = 0;
 			oscillator2.sawType = sawType;
