@@ -1,23 +1,23 @@
 {
-  "slug": "kickbaba",
-  "name": "kickbaba",
+  "slug": "Comfortzone",
+  "name": "Comfortzone",
   "version": "1.0.0",
-  "license": "MIT",
+  "license": "GPLv3+",
   "brand": "Comfortzone",
   "author": "hampa",
   "authorEmail": "hampus@nabistudios.com",
-  "authorUrl": "",
+  "authorUrl": "https://github.com/hampa",
   "pluginUrl": "",
-  "manualUrl": "",
-  "sourceUrl": "",
+  "manualUrl": "https://github.com/hampa/comfortzone/blob/main/README.md",
+  "sourceUrl": "https://github.com/hampa/comfortzone",
   "donateUrl": "",
   "changelogUrl": "",
   "modules": [
     {
-      "slug": "kickbaba",
-      "name": "kickbaba",
-      "description": "Psytrance kick bass",
-      "tags": []
+      "slug": "KickBaba",
+      "name": "KickBaba",
+      "description": "Psy Kick Bass",
+      "tags": ["Oscillator", "Kick", "Bass", "LPF", "Kbbb", "Drum"]
     }
   ]
 }

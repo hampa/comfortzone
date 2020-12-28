@@ -1,12 +1,13 @@
-# comfortzone
-VCV rack modules
+# Comfortzone Modules 
+Modules for [VCV Rack](https://github.com/VCVRack/Rack), an open-source Eurorack-style virtual modular synthesizer
 
+#### <a name="kickbaba"></a> Kick Baba 
 
-bass length: 16th + half 
-tSweep: 16th tEnd: 32th tDecay: 32th (50 ms if 150)
-vSweep: 0.44
+A Kick bass module for psy trance rolling kbbb beats.
 
-start sweep: any octave less than 10k and above 6k
-if kick in C, try G (5th)
-
-curve: 1-pow(x, 0.4)
+Features:
+ - Different saw waves
+ - Kich pitch envelopes
+ - Saw wave morphing
+ - Retriggers
+ - Usefull envelope outputs for song structure
