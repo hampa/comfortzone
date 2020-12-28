@@ -14,8 +14,8 @@
   "changelogUrl": "",
   "modules": [
     {
-      "slug": "KickBaba",
-      "name": "KickBaba",
+      "slug": "kickbaba",
+      "name": "Kickbaba",
       "description": "Psy Kick Bass",
       "tags": ["Oscillator", "Kick", "Bass", "LPF", "Kbbb", "Drum"]
     }
