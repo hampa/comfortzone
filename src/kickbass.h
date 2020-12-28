@@ -813,8 +813,6 @@ struct KickBass {
 
 		pitchVoltageParam = CLAMP(pitchVoltageParam, -4.f, 4.f);
 
-		float octave = -5;
-
 		outputs[GATE_OUT] = (bar == 15);
 		if (haveClockCycle) {
 			outputs[LFO_OUT] = lfoTicks / (float)(ticksPerClock * 16.0f);
@@ -838,7 +836,6 @@ struct KickBass {
 		outputs[PITCH_OUT] = 0;
 
 		if (kickPhase <= 1.0f) {
-			octave = -2;
 			float kickAmp = getKickEnvelope12(kickPhase);
 			outputs[PITCH_ENV_OUT] = kickAmp;
 			//float kickVoltageMin = floor(kickPitchMinParam / 12.0f);
@@ -868,12 +865,8 @@ struct KickBass {
 			oscillator.freq = kickFreqLerp;
 			outputs[PITCH_OUT] = kickVoltageLerp;
 			oscillator.process(sample_time);
-			float kickLength = getKickLength12(); 
-			float kickLength16 = getKickLength16Note();
-			float duration = kickLength / 44100.0f;
 
 			oscillator3.setPitchQ(0, 0, 0, 0);
-			float factor = _x1 * 10.0f + 1.0f;
 
 			outputs[KICK_OUT] = oscillator.sin() * kickAmp;
 
@@ -887,13 +880,9 @@ struct KickBass {
 		outputs[BASS_ENV_OUT] = 1.0f;
 		if (note16 > 0 && haveNoteOn == 0) {
 			float bassVel = 1;
-			float bassOctave = -4;
-			float bassPitchCV = bassPitchParam;
-			float bassPitch = pitchVoltageParam;
 
 			float cutoffPhase = 1 - getBassPhase();
 			bassFreqParam = (freqParam * 5000);
-			float logfreq = 20 + bassFreqParam * cutoffPhase;
 			float filterRes = CLAMP(resParam, 0.f, 1.f);
 			filterQ = powf(filterRes, 2) * 10.0f + 0.01f;
 			outputs[BASS_ENV_OUT] = cutoffPhase;
