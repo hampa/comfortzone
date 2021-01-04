@@ -583,6 +583,13 @@ struct KickBass {
 		return bar;	
 	}
 
+	char *getBarText() {
+		static char barInfo[8];
+		snprintf(barInfo, sizeof(barInfo), "%i", bar);
+		barInfo[4] = '\0';
+		return barInfo;
+	}
+
 	char *getBarInfo() {
 		static char barInfo[64] = "";
 		snprintf(barInfo, sizeof(barInfo), "%i %.2f %.2f",
@@ -629,6 +636,13 @@ struct KickBass {
 				getNoteName(kickFreqMaxNote),
 				kickPhaseAtFirstBass);
 		kickInfo[63] = '\0';	
+		return kickInfo;
+	}
+
+	char *getPhaseInfo() {
+		static char kickInfo[8] = "";
+		snprintf(kickInfo, sizeof(kickInfo), "%.2f", kickPhaseAtFirstBass);
+		kickInfo[7] = 0;
 		return kickInfo;
 	}
 

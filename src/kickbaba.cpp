@@ -11,7 +11,7 @@ struct Kickbaba : Module {
 		BASS_PITCH_PARAM,
 		SAW_PARAM,
 		MORPH_PARAM,
-		BASSVEL1_PARAM,
+		BASS_VEL_PARAM,
 		NUM_PARAMS
 	};
 	enum InputIds {
@@ -48,7 +48,7 @@ struct Kickbaba : Module {
 		configParam(BASS_PITCH_PARAM, 0.f, 1.f, 0.f, "");
 		configParam(SAW_PARAM, 0.f, 1.f, 0.f, "");
 		configParam(MORPH_PARAM, 0.f, 1.f, 0.f, "");
-		configParam(BASSVEL1_PARAM, 0.f, 1.f, 0.f, "");
+		configParam(BASS_VEL_PARAM, 0.f, 1.f, 0.f, "");
 
 	}
 
@@ -78,7 +78,7 @@ struct Kickbaba : Module {
 		float sawParam = params[SAW_PARAM].getValue();
 		float kickPitchMinParam = params[KICKPITCHMIN_PARAM].getValue();
 		float kickPitchMaxParam = params[KICKPITCHMAX_PARAM].getValue();
-		float bassVelParam = params[BASSVEL1_PARAM].getValue();
+		float bassVelParam = params[BASS_VEL_PARAM].getValue();
 
 
 		kickBass.process(sample_time, sample_rate, clk, rst, x1, y1, x2, y2,
@@ -109,10 +109,11 @@ struct Kickbaba : Module {
 
 
 struct KickbabaWidget : ModuleWidget {
-	Label* label; 
+	//Label* label; 
 	Label* labelPitch;
 	Label* labelKickPitch;
 	Label* labelKickSweep;
+	Label* labelPhase;
 
 	KickbabaWidget(Kickbaba* module) {
 		setModule(module);
@@ -120,11 +121,11 @@ struct KickbabaWidget : ModuleWidget {
 
 		addChild(createWidget<ScrewSilver>(Vec(RACK_GRID_WIDTH, 0)));
 		addChild(createWidget<ScrewSilver>(Vec(box.size.x - 2 * RACK_GRID_WIDTH, 0)));
-		addChild(createWidget<ScrewSilver>(Vec(RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
-		addChild(createWidget<ScrewSilver>(Vec(box.size.x - 2 * RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
+		//addChild(createWidget<ScrewSilver>(Vec(RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
+		//addChild(createWidget<ScrewSilver>(Vec(box.size.x - 2 * RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
 
 		float spacingX = box.size.x / (float)8.0f; 
-		float y = 130;
+		float y = 95;
 		int x0 = spacingX;
 		int x1 = box.size.x / 2 - spacingX;
 		int x2 = box.size.x / 2 + spacingX; 
@@ -137,7 +138,7 @@ struct KickbabaWidget : ModuleWidget {
 
 		y = 201;
 		addParam(createParamCentered<RoundBlackKnob>(Vec(x0, y), module, Kickbaba::BASS_PITCH_PARAM));
-		addParam(createParamCentered<RoundBlackKnob>(Vec(x1, y), module, Kickbaba::BASSVEL1_PARAM));
+		addParam(createParamCentered<RoundBlackKnob>(Vec(x1, y), module, Kickbaba::BASS_VEL_PARAM));
 		addParam(createParamCentered<RoundBlackKnob>(Vec(x2, y), module, Kickbaba::SAW_PARAM));
 		addParam(createParamCentered<RoundBlackKnob>(Vec(x3, y), module, Kickbaba::MORPH_PARAM));
 
@@ -153,45 +154,53 @@ struct KickbabaWidget : ModuleWidget {
 		addOutput(createOutputCentered<PJ301MPort>(Vec(x2, y), module, Kickbaba::KICK_OUTPUT));
 		addOutput(createOutputCentered<PJ301MPort>(Vec(x3, y), module, Kickbaba::BASS_OUTPUT));
 
-		label = createWidget<Label>(Vec(0, 30));
-		label->box.size = Vec(box.size.x, RACK_GRID_WIDTH * 12);
-		label->text = "Kick BaBa";
-		addChild(label);
+		labelPhase = createWidget<Label>(Vec(65, 132));
+		labelPhase->box.size = Vec(50, 50);
+		labelPhase->text = "0.00";
+		labelPhase->color = metallic4;
+		addChild(labelPhase);
+
+		labelKickPitch = createWidget<Label>(Vec(5, 110));
+		labelKickPitch->box.size = Vec(50, 50);
+		labelKickPitch->text = "C";
+		labelKickPitch->color = metallic4; 
+		addChild(labelKickPitch);
+
+		labelKickSweep = createWidget<Label>(Vec(45, 110));
+		labelKickSweep->box.size = Vec(50, 50);
+		labelKickSweep->text = "C";
+		labelKickSweep->color = metallic4; 
+		addChild(labelKickSweep);
 
 		labelPitch = createWidget<Label>(Vec(5, 216));
 		labelPitch->box.size = Vec(50, 50);
 		labelPitch->text = "#F";
+		labelPitch->color = metallic4; 
 		addChild(labelPitch);
-
-		labelKickPitch = createWidget<Label>(Vec(5, 145));
-		labelKickPitch->box.size = Vec(50, 50);
-		labelKickPitch->text = "C";
-		addChild(labelKickPitch);
-
-		labelKickSweep = createWidget<Label>(Vec(45, 145));
-		labelKickSweep->box.size = Vec(50, 50);
-		labelKickSweep->text = "C";
-		addChild(labelKickSweep);
 	}
+
+	// color scheme Echo Icon Theme Palette in Inkscape
+	NVGcolor metallic2 = nvgRGBA(158, 171, 176, 255);
+	NVGcolor metallic4 = nvgRGBA(14, 35, 46, 255);
+	NVGcolor green1 = nvgRGBA(204, 255, 66, 255);
+	NVGcolor red1 = nvgRGBA(255, 65, 65, 255);
 
 	void step() override {
 		Kickbaba* module = dynamic_cast<Kickbaba*>(this->module);
 		if (module) {
+			/*
 			char buf[128];
-			label->color = nvgRGBA(0, 0, 0, 255);
+			label->color = nvgRGBA(204, 204, 204, 255);
 			snprintf(buf, sizeof(buf), "BAR: %s\nK: %s\nB: %s",
 					module->kickBass.getBarInfo(),
 					module->kickBass.getKickInfo(),
 					module->kickBass.getBassInfo());
 			label->text = buf;
+			*/
 
-			labelPitch->color = nvgRGBA(255, 255, 255, 127);
+			labelPhase->text = module->kickBass.getPhaseInfo();
 			labelPitch->text = module->kickBass.getBassNoteName();
-
-			labelKickPitch->color = nvgRGBA(255, 255, 255, 127);
 			labelKickPitch->text = module->kickBass.getKickNoteName();
-
-			labelKickSweep->color = nvgRGBA(255, 255, 255, 127);
 			labelKickSweep->text = module->kickBass.getKickSweepNoteName();
 		}
 		ModuleWidget::step();
@@ -202,7 +211,7 @@ struct KickbabaWidget : ModuleWidget {
 		if (module == NULL) {
 			return;
 		}
-		drawGraph(args.vg, 0, 30, RACK_GRID_WIDTH * 10, 60, 1.0f);
+		drawGraph(args.vg, 80, 220, 70, 10, 1.0f);
 	}
 
 	const int graphResolution = 50;
@@ -212,10 +221,12 @@ struct KickbabaWidget : ModuleWidget {
 		int i;
 
 		// display background
+		/*
 		nvgBeginPath(vg);
 		nvgRect(vg, x, y, w, h);
 		nvgFillColor(vg, nvgRGBA(0,160,192,128));
 		nvgFill(vg);
+		*/
 
 		Kickbaba* module = dynamic_cast<Kickbaba*>(this->module);
 		if (module == NULL) {
@@ -229,7 +240,7 @@ struct KickbabaWidget : ModuleWidget {
 			float px = i / (float)graphResolution;
 			float py = module->kickBass.getBassGraph(px);
 			sy[i] = (1.0f - py) * h + y;
-			sx[i] = 2 + px * w;
+			sx[i] = x + px * w;
 		}
 
 		nvgBeginPath(vg);
@@ -237,15 +248,27 @@ struct KickbabaWidget : ModuleWidget {
 		for (i = 1; i < graphResolution; i++) {
 			nvgLineTo(vg, sx[i], sy[i]);
 		}
-		nvgStrokeColor(vg, nvgRGBA(255,0,0,80));
+		nvgStrokeColor(vg, metallic2);
 		nvgStrokeWidth(vg, 1.0f);
 		nvgStroke(vg);
 
+		int xStart = 45;
+		int yStart = 290;
+		int barWidth = 6;
+
+		nvgBeginPath(vg);
+		nvgMoveTo(vg, xStart, yStart);
+	      	nvgLineTo(vg, xStart + module->kickBass.getBar() * barWidth, yStart);
+		nvgStrokeColor(vg, red1);
+		nvgStrokeWidth(vg, 1.0f);
+		nvgStroke(vg);	
+
+		/*
 		point2 p;
 		for (int i = 0; i < graphResolution; i++) {
 			module->kickBass.getKickPitchGraph(i / (float)graphResolution, &p);
 			sy[i] = (1.0f - p.y) * h + y;
-			sx[i] = 2 + p.x * w;
+			sx[i] = 5 + p.x * w;
 		}
 
 		nvgBeginPath(vg);
@@ -253,9 +276,10 @@ struct KickbabaWidget : ModuleWidget {
 		for (i = 1; i < graphResolution; i++) {
 			nvgLineTo(vg, sx[i], sy[i]);
 		}
-		nvgStrokeColor(vg, nvgRGBA(255,255,0,80));
+		nvgStrokeColor(vg, red1);
 		nvgStrokeWidth(vg, 1.0f);
 		nvgStroke(vg);
+		*/
 
 	}
 };
