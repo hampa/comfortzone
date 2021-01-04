@@ -305,12 +305,12 @@ struct KBVoltageControlledOscillator {
 	void processSin(float ticks, float startPitch, float endPitch, float t) {
 		float startFreq = 261.626f * powf(2.0f, startPitch);
 		float endFreq = 261.626f * powf(2.0f, endPitch);
-		float freqAt = lerp(startFreq, endFreq, t);
+		//float freqAt = lerp(startFreq, endFreq, t);
 
 		sinBuffer[0] = sinf(2.f * M_PI * (ticks / 44100.0f) * startFreq);
 		//sinBuffer[0] = sinf(2.f * M_PI * (ticks / 44100.0f) * freqAt);
-		float w1 = startFreq;
-		float w2 = endFreq;
+		//float w1 = startFreq;
+		//float w2 = endFreq;
 		float delta = (ticks / 44100.f);
 		float tt = 1 * delta; 
 		//sinBuffer[0] = sinf(w1 * time + (w2 - w1) * time / (2.0f * M_PI));

@@ -2,7 +2,7 @@
   "slug": "Comfortzone",
   "name": "Comfortzone",
   "version": "1.0.0",
-  "license": "GPLv3+",
+  "license": "GPL-3.0-or-later",
   "brand": "Comfortzone",
   "author": "hampa",
   "authorEmail": "hampus@nabistudios.com",
@@ -17,7 +17,7 @@
       "slug": "kickbaba",
       "name": "Kickbaba",
       "description": "Psy Kick Bass",
-      "tags": ["Oscillator", "Kick", "Bass", "LPF", "Kbbb", "Drum"]
+      "tags": ["Drum", "Oscillator"]
     }
   ]
 }
