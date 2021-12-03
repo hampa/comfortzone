@@ -11,3 +11,5 @@ Features:
  - Saw wave morphing
  - Retriggers
  - Usefull envelope outputs for song structure
+
+Filter code is from the excellent VCV Ripples (https://github.com/VCVRack/AudibleInstruments)
