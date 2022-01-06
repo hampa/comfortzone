@@ -18,6 +18,18 @@
       "name": "Kickbaba",
       "description": "Psy Kick Bass",
       "tags": ["Drum", "Oscillator"]
+    },
+    {
+      "slug": "fmlead",
+      "name": "FMLead",
+      "description": "Psy FM Lead",
+      "tags": ["Oscillator"]
+    },
+    {
+      "slug": "ssqlead",
+      "name": "SSQLead",
+      "description": "Psy SSQ Lead",
+      "tags": ["Oscillator"]
     }
   ]
 }
