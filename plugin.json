@@ -30,6 +30,12 @@
       "name": "SSQLead",
       "description": "Psy SSQ Lead",
       "tags": ["Oscillator"]
+    },
+    {
+      "slug": "tzfmlead",
+      "name": "TZFMLead",
+      "description": "Psy TZFM Lead",
+      "tags": ["Oscillator"]
     }
   ]
 }

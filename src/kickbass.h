@@ -795,9 +795,11 @@ struct KickBass {
 		//int lenx = (int)floor(length/4.0f);
 		//DEBUG("clk %i ticks %i ticksPerClockRunner %i lenx %i", clk, ticks, ticksPerClockRunner, lenx);
 		if (clk) {
+			/*
 			if (ticksPerClock != ticksPerClockRunner) {
 				DEBUG("clock updated diff %i", ticksPerClock - ticksPerClockRunner);
 			}
+			*/
 			//DEBUG("epoch ticks %i", epochTicks);
 			ticksPerClock = ticksPerClockRunner;
 			if (ticksPerClockRunner > 1000) {

@@ -1,5 +1,6 @@
 #include "plugin.hpp"
 #include "filter.h"
+#include "distortion.h"
 #include <math.h>
 
 #define pi 3.14159265359
@@ -15,12 +16,15 @@ struct MultiFilter {
 	float smpRate;
 	float hp = 0.0f, bp = 0.0f, lp = 0.0f, mem1 = 0.0f, mem2 = 0.0f;
 
+	void reset() {
+		hp = bp = lp = mem1 = mem2 = 0.0f;
+	}
+
 	void setParams(float freq, float q, float smpRate) {
 		this->freq = freq;
 		this->q = q;
 		this->smpRate = smpRate;
 
-		hp = bp = lp = mem1 = mem2 = 0.0f;
 	}
 
 	void calcOutput(float sample) {
@@ -51,20 +55,23 @@ struct Fmlead : Module {
 		HP_PARAM,
 		MIX_PARAM,
 		DETUNE_PARAM,
+		DISTMODE_PARAM,
+		DISTDRIVE_PARAM,
 		NUM_PARAMS
 	};
 	enum InputIds {
 		LEFT_INPUT,
-		RIGHT_INPUT,
-		TRIGGER_INPUT,
+		//RIGHT_INPUT,
+		REC_INPUT,
+		PITCH_INPUT,
 		NUM_INPUTS
 	};
 	enum OutputIds {
 		LEFT_OUTPUT,
 		RIGHT_OUTPUT,
-		LP_OUTPUT,
-		BP_OUTPUT,
-		HP_OUTPUT,
+		//LP_OUTPUT,
+		//BP_OUTPUT,
+		//HP_OUTPUT,
 		NUM_OUTPUTS
 	};
 	enum LightIds {
@@ -78,27 +85,35 @@ struct Fmlead : Module {
 	#define BUFFER_SIZE 2048
 	float leftIdx = 0;
 	float rightIdx = 0;
+	Distortion *dist = NULL;
 
 	Fmlead () {
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
-		configParam(PITCH_PARAM, 0.f, 1.f, 0.f, "");
-		configParam(COMPRESS_PARAM, 0.f, 1.f, 0.f, "");
-		configParam(LP_PARAM, 0.f, 1.f, 0.f, "");
-		configParam(BP_PARAM, 0.f, 1.f, 0.f, "");
-		configParam(HP_PARAM, 0.f, 1.f, 0.f, "");
-		configParam(MIX_PARAM, 0.f, 1.f, 0.f, "");
-		configParam(DETUNE_PARAM, 0.f, 1.f, 0.f, "");
+		configParam(PITCH_PARAM, 0.f, 1.f, 0.f, "pitch");
+		configParam(COMPRESS_PARAM, 0.f, 1.f, 0.f, "compress");
+		configParam(LP_PARAM, 0.f, 1.f, 0.f, "lp");
+		configParam(BP_PARAM, 0.f, 1.f, 0.f, "bp");
+		configParam(HP_PARAM, 0.f, 1.f, 0.f, "hp");
+		configParam(MIX_PARAM, 0.f, 1.f, 0.f, "mix");
+		configParam(DETUNE_PARAM, 0.f, 1.f, 0.f, "detune");
+		configParam(DISTMODE_PARAM, 0.f, 1.f, 0.f, "distmode");
+		configParam(DISTDRIVE_PARAM, 0.f, 1.f, 0.f, "distdrive");
 
 		for (int i = 0; i < BUFFER_SIZE; i++) {
-			ssqBuffer[i] = leftBuffer[i] = rightBuffer[i] = 0;
+			rawBuffer[i] = ssqBuffer[i] = leftBuffer[i] = rightBuffer[i] = 0;
 		}
-		setFmFreq(220.0f, 0.0f);
 		createSSQ();
 		createFilters(APP->engine->getSampleRate());
+		setFmFreq(220.0f, 0.0f, APP->engine->getSampleRate());
+
+		dist = new Distortion();
 	}
 
 	~Fmlead () {
 		deleteFilters();
+		if (dist != NULL) {
+			delete dist;
+		}
 	}
 
 	void createFilters(float sampleRate) {
@@ -120,6 +135,7 @@ struct Fmlead : Module {
 	}
 
 	void onSampleRateChange(const SampleRateChangeEvent& e) override {
+		//DEBUG("onSampleRateChange %f", e.sampleRate);
 		deleteFilters();
 		createFilters(e.sampleRate);
 	}
@@ -133,6 +149,7 @@ struct Fmlead : Module {
 	float leftBuffer[BUFFER_SIZE];
 	float rightBuffer[BUFFER_SIZE];
 	float ssqBuffer[BUFFER_SIZE];
+	float rawBuffer[BUFFER_SIZE];
 	int recState = 0;
 	int recIdx = 0;
 	MultiFilter filterLP, filterBP, filterHP;
@@ -152,7 +169,7 @@ struct Fmlead : Module {
 		multiCompress3(sampleRate, kFilterHP, hp, comp01, &leftBuffer[0], &HP[0]);
 		for (int i = 0; i < BUFFER_SIZE; i++) {
 			//rightBuffer[i] = BP[i];
-			rightBuffer[i] = (LP[i] + BP[i] + HP[i]) / 3.0f;
+			rightBuffer[i] = (LP[i] * 0.9f + BP[i] * 1.1f + HP[i]) / 3.0f;
 			//rightBuffer[i] = bw_band_pass(bpFilter, leftBuffer[i]);
 			/*
 			float f = LP[i];
@@ -334,16 +351,16 @@ struct Fmlead : Module {
 		float current_phase = 0.0f;
 		for (int i = 0; i < BUFFER_SIZE; i++) {
 			float ph = (float)i / BUFFER_SIZE;
-			leftBuffer[i] = rightBuffer[i] = ssqBuffer[i] = sinf(current_phase);
+			rawBuffer[i] = leftBuffer[i] = rightBuffer[i] = ssqBuffer[i] = sinf(current_phase);
 			float sweep = w0 + (w1 - w0) * ph;
 			instantaneous_w = sweep;
 			current_phase = fmod(current_phase + instantaneous_w, 2.0f * M_PI);
 		}
 	}
 
-	void setFmFreq(float hz, float octave) {
+	void setFmFreq(float hz, float octave, float sampleRate) {
 		if (hz > 0 && octave >= 0) {
-			fmLength = floorf(44100.0f / (hz * (octave + 1.0f)));
+			fmLength = floorf(sampleRate / (hz * (octave + 1.0f)));
 		}
 		int i = 0;
 		while (fmLength >= BUFFER_SIZE && i < 5) {
@@ -368,6 +385,7 @@ struct Fmlead : Module {
 		// C 0
 		return 16.352f * powf(2.0f, note / 12.0f);
 	}
+
 	float compress = 0;
 	void process(const ProcessArgs& args) override {
 		float sample_time = args.sampleTime;
@@ -381,12 +399,27 @@ struct Fmlead : Module {
 		float mix = LERP(0.01f, 0.5f, params[MIX_PARAM].getValue());
 		float detune = LERP(0, 0.1f, params[DETUNE_PARAM].getValue());
 
-		fmNote = floorf(pitch * 24);
+		float pitchCV = 0;
+		fmNote = floorf(pitch * 36);
 		float freq = getFreqFromNote(fmNote);
-		//setFmFreq(20.0f + 200.0f * pitch, 0);
-		setFmFreq(freq, 0);
+		if (inputs[PITCH_INPUT].isConnected()) {
+			pitchCV = inputs[PITCH_INPUT].getVoltage();
+			freq += powf(2.0f, pitchCV);
+		}
 
-		bool doCapture = sampleTrig.process(inputs[TRIGGER_INPUT].getVoltage());
+		// std::pow(2.f, x)
+		//freq = dsp::FREQ_C4 * dsp::approxExp2_taylor5(pitch + 30.f) / std::pow(2.f, 30.f);
+		//freq += dsp::FREQ_C4 * inputs[FM_INPUT].getPolyVoltageSimd<float_4>(c) * fmParam;
+
+		//setFmFreq(20.0f + 200.0f * pitch, 0);
+		setFmFreq(freq, 0, args.sampleRate);
+
+		dist->controls.mode = floorf(params[DISTMODE_PARAM].getValue() * 7);
+		dist->controls.drive = 1.0f + params[DISTDRIVE_PARAM].getValue() * 5.0f;
+		dist->controls.mix = 1.0f;
+
+
+		bool doCapture = sampleTrig.process(inputs[REC_INPUT].getVoltage());
 		if (doCapture && recState == STATE_DONE && inputs[LEFT_INPUT].isConnected()) {
 			recState = STATE_REC;
 			recIdx = 0;
@@ -402,7 +435,10 @@ struct Fmlead : Module {
 			}
 			else {
 				if (inputs[LEFT_INPUT].isConnected()) {
+					//float v = inputs[LEFT_INPUT].getVoltage() * 0.125f;
+					//leftBuffer[recIdx] = dist->processSample(v) * 8.0f;
 					leftBuffer[recIdx] = inputs[LEFT_INPUT].getVoltage();
+					rawBuffer[recIdx] = inputs[LEFT_INPUT].getVoltage();
 				}
 				/*
 				if (inputs[RIGHT_INPUT].isConnected()) {
@@ -428,15 +464,23 @@ struct Fmlead : Module {
 		float leftMix = LERP(center, left, mix);
 		float rightMix = LERP(center, right, mix);
 
-		outputs[LEFT_OUTPUT].setVoltage(leftMix);
-		outputs[RIGHT_OUTPUT].setVoltage(rightMix);
+		//outputs[LEFT_OUTPUT].setVoltage(leftMix);
+		//outputs[RIGHT_OUTPUT].setVoltage(rightMix);
+		static int prevMode = -1;
+		if (prevMode != dist->controls.mode) {
+			DEBUG("%i\n", dist->controls.mode);
+			prevMode = dist->controls.mode;
+		}
+		outputs[LEFT_OUTPUT].setVoltage(dist->processSample(leftMix * 0.125f) * 8.0f);
+		outputs[RIGHT_OUTPUT].setVoltage(dist->processSample(rightMix * 0.125f) * 8.0f);
+
 		//outputs[LEFT_OUTPUT].setVoltage(center);
 		//outputs[RIGHT_OUTPUT].setVoltage(center);
 
 		//outputs[FILTER_OUTPUT].setVoltage(bw_band_pass(bpFilter, inputs[LEFT_INPUT].getVoltage()));
-		outputs[LP_OUTPUT].setVoltage(bw_low_pass(lpFilter, inputs[LEFT_INPUT].getVoltage()));
-		outputs[BP_OUTPUT].setVoltage(bw_band_pass(bpFilter, inputs[LEFT_INPUT].getVoltage()));
-		outputs[HP_OUTPUT].setVoltage(bw_high_pass(hpFilter, inputs[LEFT_INPUT].getVoltage()));
+		//outputs[LP_OUTPUT].setVoltage(bw_low_pass(lpFilter, inputs[LEFT_INPUT].getVoltage()));
+		//outputs[BP_OUTPUT].setVoltage(bw_band_pass(bpFilter, inputs[LEFT_INPUT].getVoltage()));
+		//outputs[HP_OUTPUT].setVoltage(bw_high_pass(hpFilter, inputs[LEFT_INPUT].getVoltage()));
 
 		samples++;
 		if (samples >= fmLength) {
@@ -445,7 +489,7 @@ struct Fmlead : Module {
 		//DEBUG("%i %.2f %.2f", samples, leftSamples, rightSamples);
 		leftSamples += 1.0f - detune * 0.1f;
 		rightSamples += 1.0f + detune * 0.1f;
-		if (leftSamples >= fmLength || rightSamples >= fmLength) {
+		if (leftSamples >= fmLength -20 || rightSamples >= fmLength -20) {
 			leftSamples = rightSamples = 0;
 		}
 	}
@@ -456,40 +500,45 @@ struct FmleadWidget : ModuleWidget {
 
 	FmleadWidget(Fmlead* module) {
 		setModule(module);
-		setPanel(APP->window->loadSvg(asset::plugin(pluginInstance, "res/kickbaba10HP.svg")));
+		setPanel(APP->window->loadSvg(asset::plugin(pluginInstance, "res/fmlead10HP.svg")));
 
 		addChild(createWidget<ScrewSilver>(Vec(RACK_GRID_WIDTH, 0)));
-		addChild(createWidget<ScrewSilver>(Vec(box.size.x - 2 * RACK_GRID_WIDTH, 0)));
+		//addChild(createWidget<ScrewSilver>(Vec(box.size.x - 2 * RACK_GRID_WIDTH, 0)));
 
-
-		float spacingX = box.size.x / (float)8.0f;
-		float y = 95;
+		float spacingX = box.size.x / (float)4.0f;
+		float y = 85;
 		int x0 = spacingX;
-		int x1 = box.size.x / 2 - spacingX;
-		int x2 = box.size.x / 2 + spacingX;
-		int x3 = box.size.x - spacingX;
+		int x1 = box.size.x - spacingX;
+		//int x2 = box.size.x / 2 + spacingX;
+		//int x3 = box.size.x / 2 - spacingX;
 
-		addParam(createParamCentered<RoundBlackKnob>(Vec(x0, y), module, Fmlead::PITCH_PARAM));
-		addParam(createParamCentered<RoundBlackKnob>(Vec(x1, y), module, Fmlead::COMPRESS_PARAM));
+		addParam(createParamCentered<RoundBlackKnob>(Vec(x0, y), module, Fmlead::COMPRESS_PARAM));
+		addParam(createParamCentered<RoundBlackKnob>(Vec(x1, y), module, Fmlead::DETUNE_PARAM));
+		//addParam(createParamCentered<RoundBlackKnob>(Vec(x2, y), module, Fmlead::MIX_PARAM));
+
+		y = 140;
+		addParam(createParamCentered<RoundBlackKnob>(Vec(x0, y), module, Fmlead::DISTMODE_PARAM));
+		addParam(createParamCentered<RoundBlackKnob>(Vec(x1, y), module, Fmlead::DISTDRIVE_PARAM));
 
 		y = 201;
-		addInput(createInputCentered<PJ301MPort>(Vec(x0, y), module, Fmlead::TRIGGER_INPUT));
-		//addParam(createParamCentered<RoundBlackKnob>(Vec(x1, y), module, Fmlead::LP_PARAM));
-		addParam(createParamCentered<RoundBlackKnob>(Vec(x2, y), module, Fmlead::MIX_PARAM));
-		addParam(createParamCentered<RoundBlackKnob>(Vec(x3, y), module, Fmlead::DETUNE_PARAM));
+		addInput(createInputCentered<PJ301MPort>(Vec(x0, y), module, Fmlead::PITCH_INPUT));
+		addParam(createParamCentered<RoundBlackKnob>(Vec(x1, y), module, Fmlead::PITCH_PARAM));
 
 		y = 272;
 		addInput(createInputCentered<PJ301MPort>(Vec(x0, y), module, Fmlead::LEFT_INPUT));
-		addInput(createInputCentered<PJ301MPort>(Vec(x1, y), module, Fmlead::RIGHT_INPUT));
-		addOutput(createOutputCentered<PJ301MPort>(Vec(x2, y), module, Fmlead::LEFT_OUTPUT));
-		addOutput(createOutputCentered<PJ301MPort>(Vec(x3, y), module, Fmlead::RIGHT_OUTPUT));
+		addInput(createInputCentered<PJ301MPort>(Vec(x1, y), module, Fmlead::REC_INPUT));
+		//addInput(createInputCentered<PJ301MPort>(Vec(x1, y), module, Fmlead::RIGHT_INPUT));
 
 		y = 344;
-		addOutput(createOutputCentered<PJ301MPort>(Vec(x0, y), module, Fmlead::LP_OUTPUT));
-		addOutput(createOutputCentered<PJ301MPort>(Vec(x1, y), module, Fmlead::BP_OUTPUT));
-		addOutput(createOutputCentered<PJ301MPort>(Vec(x2, y), module, Fmlead::HP_OUTPUT));
+		addOutput(createOutputCentered<PJ301MPort>(Vec(x0, y), module, Fmlead::LEFT_OUTPUT));
+		addOutput(createOutputCentered<PJ301MPort>(Vec(x1, y), module, Fmlead::RIGHT_OUTPUT));
 
-		labelPitch = createWidget<Label>(Vec(5, 216));
+		//addOutput(createOutputCentered<PJ301MPort>(Vec(x0, y), module, Fmlead::LP_OUTPUT));
+		//addOutput(createOutputCentered<PJ301MPort>(Vec(x1, y), module, Fmlead::BP_OUTPUT));
+		//addOutput(createOutputCentered<PJ301MPort>(Vec(x2, y), module, Fmlead::HP_OUTPUT));
+
+		//labelPitch = createWidget<Label>(Vec(5, 216));
+		labelPitch = createWidget<Label>(Vec(42, 216));
 		labelPitch->box.size = Vec(50, 50);
 		labelPitch->text = "#F";
 		labelPitch->color = metallic4;
