@@ -2,3 +2,5 @@ build/
 dist/
 plugin.dll
 plugin.dylib
+tags
+.DS_Store
