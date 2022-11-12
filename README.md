@@ -18,9 +18,13 @@ Filter code is from the excellent VCV Ripples (https://github.com/VCVRack/Audibl
 
 TZFM Oscillator that outputs carrier, modulator and resulting through zero freqency modulation. 
 
+Left and right output should preferably run into a nice BP filter such as Ripples.
+
 Features:
  - 5 different wave types for both modulator and carrier (sin, tri, saw, ramp, square, polybleep saw, polybleep square)
  - Always in tune
  - Handy octave switchers for both modulator and carrier 
  - CV input for Frequency Modulation amount
  - Unison detune for stereo output
+
+Oscillator code is from Electro Smith (https://github.com/electro-smith/DaisyExamples) 
