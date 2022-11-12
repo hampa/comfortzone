@@ -53,7 +53,7 @@ float Oscillator::Process()
 			out = 0.0f;
 		break;
 	}
-	phase_ += phase_inc_;
+	phase_ += phase_inc_ + detune_ * sr_recip_;
 	if (phase_ > TWOPI_F) {
 		phase_ -= TWOPI_F;
 		eoc_ = true;
