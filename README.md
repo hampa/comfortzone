@@ -14,11 +14,13 @@ Features:
 
 Filter code is from the excellent VCV Ripples (https://github.com/VCVRack/AudibleInstruments)
 
-#### <a name="tzfmlead"></a> Through Zero Frequency Modulation Lead 
+#### <a name="tzfmlead"></a> TZFM Lead 
 
-TZFM Oscillator that outputs carrier, modulator and resulting through zero freqency modulation. 
+TZFM Lead is an oscillator that performs through zero frequency modulation on a pair of interal waves.
 
-Left and right output should preferably run into a nice BP filter such as Ripples.
+Instead of tuning it with an external modulatation source TZFM Lead outputs the carrier, modulator and resulting TZFM wave.
+
+Left and right output should preferably run into a nice band pass filter such as VCV Ripples.
 
 Features:
  - 5 different wave types for both modulator and carrier (sin, tri, saw, ramp, square, polybleep saw, polybleep square)
