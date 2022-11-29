@@ -24,6 +24,18 @@
       "name": "TZFMLead",
       "description": "Psy TZFM Lead",
       "tags": ["Oscillator"]
+    },
+    {
+      "slug": "sundial",
+      "name": "Sundial",
+      "description": "Psy Sundial wavetable",
+      "tags": ["Oscillator"]
+    },
+    {
+      "slug": "graintable",
+      "name": "Graintable",
+      "description": "Psy Graintable",
+      "tags": ["Oscillator"]
     }
   ]
 }

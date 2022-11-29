@@ -21,6 +21,5 @@ DISTRIBUTABLES += $(wildcard LICENSE*)
 # Include the Rack plugin Makefile framework
 include $(RACK_DIR)/plugin.mk
 
-
-tags :
-	ctags -R src/*.{cpp,h,hpp} /Users/hampa/code/Rack-SDK 
+tag :
+	sh cz-buildtags.sh
