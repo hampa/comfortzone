@@ -25,6 +25,7 @@ struct Graintable : Module {
 	};
 
 	enum OutputIds {
+		EVEN_ODD_OUTPUT,
 		LEFT_OUTPUT,
 		RIGHT_OUTPUT,
 		NUM_OUTPUTS
@@ -128,6 +129,7 @@ struct Graintable : Module {
 
 		outputs[LEFT_OUTPUT].setVoltage(window * 5.0f);
 		outputs[RIGHT_OUTPUT].setVoltage(fOut * 5.0f);
+		outputs[EVEN_ODD_OUTPUT].setVoltage(amountParam);
 	}
 };
 
@@ -160,6 +162,7 @@ struct GraintableWidget : ModuleWidget {
 		addParam(createParamCentered<RoundBlackKnob>(Vec(x1, y), module, Graintable::AM_WAVE_PARAM));
 
 		y = 296;
+		addOutput(createOutputCentered<PJ301MPort>(Vec(x0, y), module, Graintable::EVEN_ODD_OUTPUT));
 		//addOutput(createOutputCentered<PJ301MPort>(Vec(x0, y), module, Graintable::MODULATOR_OUTPUT));
 		//addOutput(createOutputCentered<PJ301MPort>(Vec(x1, y), module, Graintable::CARRIER_OUTPUT));
 

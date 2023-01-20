@@ -7,6 +7,9 @@ extern Model* modelKickbaba;
 extern Model* modelTzfmlead;
 extern Model* modelSundial;
 extern Model* modelGraintable;
+extern Model* modelLazerBubbles;
+extern Model* modelPartials;
+extern Model* modelGator;
 
 void init(Plugin* p) {
 	pluginInstance = p;
@@ -16,4 +19,7 @@ void init(Plugin* p) {
 	p->addModel(modelTzfmlead);
 	p->addModel(modelSundial);
 	p->addModel(modelGraintable);
+	p->addModel(modelLazerBubbles);
+	p->addModel(modelPartials);
+	p->addModel(modelGator);
 }

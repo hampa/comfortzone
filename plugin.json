@@ -36,6 +36,24 @@
       "name": "Graintable",
       "description": "Psy Graintable",
       "tags": ["Oscillator"]
+    },
+    {
+      "slug": "partials",
+      "name": "Partials",
+      "description": "Psy Partials",
+      "tags": ["Oscillator"]
+    },
+    {
+      "slug": "lazerbubbles",
+      "name": "LazerBubbles",
+      "description": "Psy Lazers and Bubbles",
+      "tags": ["Oscillator"]
+    },
+    {
+      "slug": "gator",
+      "name": "Gator",
+      "description": "Psy Gate ADSR",
+      "tags": ["ADSR"]
     }
   ]
 }

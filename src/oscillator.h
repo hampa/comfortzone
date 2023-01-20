@@ -3,6 +3,13 @@
 #define PI_F 3.1415927410125732421875f
 #define TWOPI_F (2.0f * PI_F)
 #define HALFPI_F (PI_F * 0.5f)
+constexpr float TWO_PI_RECIP = 1.0f / TWOPI_F;
+
+// bins
+// 1
+// 5
+// 20
+// 371
 
 class Oscillator {
 	public:
@@ -37,6 +44,10 @@ class Oscillator {
 			return phase_;
 		}
 
+		inline float GetPhase01() {
+			return phase_ * TWO_PI_RECIP;
+		}
+
 		inline float GetPhaseInc() {
 			return phase_inc_;
 		}
@@ -68,9 +79,8 @@ class Oscillator {
 		inline bool IsFalling() { return phase_ >= PI_F; }
 
 		float Process();
-
-		void PhaseAdd(float _phase) { phase_ += (_phase * TWOPI_F); }
-
+		float ProcessOffset(float offset);
+		void AddPhase(float p);
 		void Reset(float _phase = 0.0f) { phase_ = _phase; }
 
 		int GetWaveform() { return waveform_; }

@@ -11,6 +11,7 @@ struct Sundial : Module {
 		PHASER_OFFSET_PARAM,
 		FM_FREQ_PARAM,
 		FM_AMOUNT_PARAM,
+		WAVETABLE_SCAN_PARAM,
 		NUM_PARAMS
 	};
 
@@ -40,6 +41,7 @@ struct Sundial : Module {
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
 		configParam(PHASER_WIDTH_PARAM, 0.f, 1.f, 0.5f, "Phaser Width", "%", 0.f, 100.f);
 		configParam(PHASER_OFFSET_PARAM, 0.f, 1.f, 0.5f, "Phaser Offset", "%", 0.f, 100.f);
+		configParam(WAVETABLE_SCAN_PARAM, 0.f, 1.f, 0.5f, "Wavetable Scan", "%", 0.f, 100.f);
 		configParam(FM_FREQ_PARAM, 0.f, 1.f, 0.5f, "FM Freq", "%", 0.f, 100.f);
 		configParam(FM_AMOUNT_PARAM, 0.f, 1.f, 0.5f, "FM Amount", "%", 0.f, 100.f);
 		configInput(PHASER_WIDTH_INPUT, "Phaser Width FM");
@@ -64,11 +66,40 @@ struct Sundial : Module {
 	float prev_center = 0;
 	float prev_left = 0;
 
+	int wavetable_idx = 0;
+#define NUM_WAVETABLES 16
+	float wavetableProcess[33];
+	Oscillator wtOsc[NUM_WAVETABLES][3];
+	int wavetables[NUM_WAVETABLES][3] = {
+		{1, 5,  8}, // 0
+		{1, 7, 10}, // 1
+		{1, 7, 16}, // 2
+		{1,11, 19}, // 3
+		{1,14, 18}, // 4
+		{1,13, 18}, // 5
+		{1,17, 22}, // 6
+		{1,16, 24}, // 7
+		{1, 7, 18}, // 8
+		{1,10, 18}, // 9
+		{1,18, 21}, // 10
+		{1,12, 22}, // 11
+		{1,19, 25}, // 12
+		{1, 8, 21}, // 13
+		{1, 8, 30}, // 14
+		{1,21, 32}  // 15
+	};
+
 	void onSampleRateChange(const SampleRateChangeEvent& e) override {
 		for (int i = 0; i < NUM_OSC; i++) {
 			osc[i].Init(e.sampleRate);
 			osc[i].SetWaveform(Oscillator::WAVE_SIN);
 			partials[i] = 0;
+		}
+		for (int i = 0; i < NUM_WAVETABLES; i++) {
+			for (int x = 0; x < 3; x++) {
+				wtOsc[i][x].Init(e.sampleRate);
+				wtOsc[i][x].SetWaveform(Oscillator::WAVE_SIN);
+			}
 		}
 		oscFm.Init(e.sampleRate);
 		oscFm.SetWaveform(Oscillator::WAVE_POLYBLEP_SQUARE);
@@ -103,6 +134,7 @@ struct Sundial : Module {
 	void process(const ProcessArgs& args) override {
 		float phaserWidth = params[PHASER_WIDTH_PARAM].getValue();
 		float phaserOffset = params[PHASER_OFFSET_PARAM].getValue();
+		float wavetableScan = params[WAVETABLE_SCAN_PARAM].getValue();
 		float fmAmount = params[FM_AMOUNT_PARAM].getValue();
 		float fmMidi = params[FM_FREQ_PARAM].getValue() * 127.0f - 64.0f;
 		float fmFreq = mtof(fmMidi);
@@ -127,12 +159,45 @@ struct Sundial : Module {
 		oscFm.SetFreq(fmFreq);
 		float fm = oscFm.Process() * fmAmount;
 
+		/*
+		for (int i = 0; i < 33; i++) {
+			osc[i].SetFreq(fmFreq * (i + 1.0f));
+			wavetableProcess[i] = osc[i].Process();
+		}
+		*/
+		for (int i = 0; i < NUM_WAVETABLES; i++) {
+			for (int x = 0; x < 3; x++) {
+				int p = wavetables[i][x];
+				//float freq = powf(2.0f, fCV + fm) * (32.703251f * 0.5f);
+				wtOsc[i][x].SetFreq((fmFreq * p) * (1.0f + fm));
+			}
+		}
+
+		float wavetableVal = LERP(0, (NUM_WAVETABLES - 1), wavetableScan);
+		int wavetableIdx = floorf(wavetableVal);
+		float wavetableLerp = wavetableVal - wavetableIdx;
+		int nextIdx = (wavetableIdx == NUM_WAVETABLES - 1) ? 0 : wavetableIdx + 1;
+		float f0 = 0;
+		for (int i = 0; i < 3; i++) {
+			//f0 += wavetableProcess[wavetables[wavetableIdx][i]];
+			f0 += wtOsc[wavetableIdx][i].Process();
+		}
+		float f1 = 0;
+		for (int i = 0; i < 3; i++) {
+			//f1 += wavetableProcess[wavetables[nextIdx][i]];
+			f1 += wtOsc[nextIdx][i].Process();
+		}
+		//float fOut = LERP(f0, f1, wavetableLerp);
+		float fOut = f0;
+		//float f0 = getPartial(
+		/*
 		for (int i = 0; i < NUM_OSC; i++) {
 			float freq = powf(2.0f, fCV + fm) * (32.703251f * 0.5f);
 			osc[i].SetFreq(freq);
 			partials[i] = osc[i].Process();
 			fCV += inc;
 		}
+		*/
 
 		/*
 		float f0 = getPartial(offset - 1) * 0.15f;
@@ -141,6 +206,7 @@ struct Sundial : Module {
 		float fOut = f0 + f1 + f2;
 		*/
 
+		/*
 		float fOut = 0;
 		float count = 0;
 		for (float f = 0; f < NUM_OSC; f += width) {
@@ -151,6 +217,7 @@ struct Sundial : Module {
 			count += 1.0f;
 		}
 		fOut /= count;
+		*/
 
 		//fOut /= 1.0f;
 		//fOut /= (float)i;
@@ -186,7 +253,7 @@ struct SundialWidget : ModuleWidget {
 		addParam(createParamCentered<RoundBlackKnob>(Vec(x1, y), module, Sundial::FM_AMOUNT_PARAM));
 
 		y = 238;
-		//addParam(createParamCentered<RoundBlackKnob>(Vec(x0, y), module, Sundial::MODULATOR_OCTAVE_PARAM));
+		addParam(createParamCentered<RoundBlackKnob>(Vec(x0, y), module, Sundial::WAVETABLE_SCAN_PARAM));
 		//addParam(createParamCentered<RoundBlackKnob>(Vec(x1, y), module, Sundial::CARRIER_OCTAVE_PARAM));
 
 		y = 296;
