@@ -50,6 +50,12 @@
       "tags": ["Oscillator"]
     },
     {
+      "slug": "dispersersaw",
+      "name": "DisperserSaw",
+      "description": "Disperser Saw",
+      "tags": ["Oscillator"]
+    },
+    {
       "slug": "gator",
       "name": "Gator",
       "description": "Psy Gate ADSR",
