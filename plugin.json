@@ -56,6 +56,12 @@
       "tags": ["Oscillator"]
     },
     {
+      "slug": "grainosc",
+      "name": "GrainOscillator",
+      "description": "Grain Oscillator",
+      "tags": ["Oscillator"]
+    },
+    {
       "slug": "gator",
       "name": "Gator",
       "description": "Psy Gate ADSR",
