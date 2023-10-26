@@ -16,8 +16,9 @@ struct GrainOsc : Module {
 	};
 
 	enum InputIds {
-		PHASER_WIDTH_INPUT,
-		PHASER_OFFSET_INPUT,
+		MORPH_INPUT,
+		WARP_INPUT,
+		GATE_INPUT,
 		NUM_INPUTS
 	};
 
@@ -51,6 +52,8 @@ struct GrainOsc : Module {
 		WAVETABLE_SIN,
 		WAVETABLE_FIBOGLIDE,
 		WAVETABLE_HARMONICSWEEP,
+		WAVETABLE_SUNDIAL2,
+		WAVETABLE_SUNDIAL3,
 		NUM_WAVETABLES
 	};
 
@@ -89,6 +92,15 @@ struct GrainOsc : Module {
 		return f1 + f2;
 	}
 
+	float getSinePartial3(float phase01, float bin0Vol, int binA, float binAVol, int binB, float binBVol) {
+		float phase = 2.0f * M_PI * phase01; 
+		float f0 = sinf(phase) * bin0Vol;
+		float f1 = sinf(phase * binA) * binAVol;
+		float f2 = sinf(phase * binB) * binBVol;
+		//return LERP(f1, f2, 0.5f);
+		return f0 + f1 + f2;
+	}
+
 	float sinebuf[BUFFER_SIZE];
 	float sinebuf3[BUFFER_SIZE];
 #define NUM_FIBOGLIDE 12
@@ -107,8 +119,9 @@ struct GrainOsc : Module {
 		configParam(OSC_PARAM, 0.f, NUM_OSC - 1, 0.0f, "Osc");
 		configParam(MORPH_PARAM, 0.f, 1.0f, 0.0f, "Morph");
 		configParam(WAVETABLE_PARAM, 0.f, NUM_WAVETABLES - 1, 0.0f, "wavetable");
-		configInput(PHASER_WIDTH_INPUT, "Phaser Width FM");
-		configInput(PHASER_OFFSET_INPUT, "Phaser Offset FM");
+		configInput(MORPH_INPUT, "Morph");
+		configInput(WARP_INPUT, "Warp");
+		configInput(GATE_INPUT, "Gate");
 		fillSineWave(sinebuf, BUFFER_SIZE, 1);
 		fillSineWave(sinebuf3, BUFFER_SIZE, 3);
 
@@ -229,8 +242,8 @@ struct GrainOsc : Module {
 		return result;
 	}
 
-	inline float getPureSine(float phase01) {
-		return sinf(2.0f * M_PI * phase01); 
+	inline float getPureSine(float phase01, float mult = 1) {
+		return sinf(2.0f * M_PI * phase01 * mult); 
 	}
 
 	inline float getHarmonicSweep(float phase01, float wt) {
@@ -251,6 +264,156 @@ struct GrainOsc : Module {
 		return result;
 	}
 
+	/*
+	float quantizeMultiplierToMinorScale(float mult) {
+		// Map mult to 0 to 1 range (assuming mult is provided in this range).
+		int index = (int)(mult * 6.9999); // 6.9999 is a slight bias to ensure proper rounding
+
+		return noteMultipliers[index];
+	}
+	*/
+
+
+	float noteMultipliers4up[28] = {
+		// 1st octave
+		1.0, 1.1225, 1.1892, 1.3348, 1.4983, 1.5874, 1.7818,
+		// 2nd octave
+		2.0, 2.245, 2.3784, 2.6696, 2.9966, 3.1748, 3.5636,
+		// 3rd octave
+		4.0, 4.49, 4.7568, 5.3392, 5.9932, 6.3496, 7.1272,
+		// 4th octave
+		8.0, 8.98, 9.5136, 10.6784, 11.9864, 12.6992, 14.2544
+	};
+
+	int mapKnobToIndex(float value, float centerIdx = 14, float length = 43) {
+		if (value <= 0.5) {
+			return (int)(value * centerIdx * 2.0f);  // 28 is 2 times 14, which gives the scaling factor for the first half.
+		} 
+		return centerIdx + (int)((value - 0.5) * (length - 1 - centerIdx));  // 54 is 2 times (41-14), which gives the scaling factor for the second half.
+	}
+
+
+	float minorMultiplier[43] = {
+		// 2nd octave down
+		0.25, 0.280625, 0.2973, 0.3337, 0.374575, 0.39685, 0.44545,
+		// 1st octave down
+		0.5, 0.56125, 0.5946, 0.6674, 0.74915, 0.7937, 0.8909,
+		// Base octave
+		1.0, 1.1225, 1.1892, 1.3348, 1.4983, 1.5874, 1.7818,
+		// 1st octave up
+		2.0, 2.245, 2.3784, 2.6696, 2.9966, 3.1748, 3.5636,
+		// 2nd octave up
+		4.0, 4.49, 4.7568, 5.3392, 5.9932, 6.3496, 7.1272,
+		// 3rd octave up
+		8.0, 8.98, 9.5136, 10.6784, 11.9864, 12.6992, 14.2544,
+		// and one note
+		9.0f
+	};
+
+	float mapArpKnob(float value) {
+		int idx = mapKnobToIndex(value, 8, 25);
+		return arpMultiplier[idx];
+	}
+
+	float mapMinorKnob(float value) {
+		int idx = mapKnobToIndex(value, 14, 43);
+		return minorMultiplier[idx];
+	}
+
+	float setSlew(float target_value, float slew_up_rate, float slew_down_rate) {
+		static float current_value = 0.0f;
+		float slew_rate = (target_value > current_value) ? slew_up_rate : slew_down_rate;
+		current_value += slew_rate * (target_value - current_value);
+		return current_value;
+	}
+
+	// CENTER 8
+	float arpMultiplier[25] = {
+		// 2 octaves down
+		0.25, 0.2973, 0.374575, 0.44545,
+		// 1 octave down
+		0.5, 0.5946, 0.74915, 0.8909,
+		// Base octave
+		1.0, 1.1892, 1.4983, 1.7818,
+		// 1 octave up
+		2.0, 2.3784, 2.9966, 3.5636,
+		// 2 octaves up
+		4.0, 4.7568, 5.9932, 7.1272,
+		// 3 octaves up
+		8.0, 9.5136, 11.9864, 14.2544,
+		9.0f
+	};
+
+
+
+	struct sundial_t {
+		int binA;
+		int binB;
+	};
+	struct sundial_t sd2[NUM_FIBOGLIDE] = {
+		{ 5, 12 },
+		{ 5, 10 },
+		{ 3, 8 },
+		{ 5, 9 },
+		{ 4, 10 },
+		{ 4, 14 },
+		{ 7, 18 },
+		{ 6, 20 },
+		{ 7, 16 },
+		{ 9, 24 },
+		{ 3, 12 },
+		{ 5, 8 }
+	};
+
+	struct sundial_t sd3[NUM_FIBOGLIDE] = {
+		{ 5, 8 },
+		{ 7, 10 },
+		{ 7, 16 },
+		{ 11, 19 },
+		{ 14, 18 },
+		{ 13, 18 },
+		{ 17, 22 },
+		{ 16, 24 },
+		{ 7, 18 },
+		{ 10, 18 },
+		{ 18, 21 },
+		{ 12, 22 }
+	};
+
+
+	inline float getSundial2(float phase01, float wt) {
+		int idxA = floorf(wt);
+		int idxB = idxA + 1;
+		float rem = wt - floorf(wt);
+		if (idxA < 0) {
+			idxA = NUM_FIBOGLIDE - 1;
+			idxB = 0;
+		}
+		if (idxB > NUM_FIBOGLIDE) {
+			idxB = 0;
+		}
+		float a = getSinePartial3(phase01, 0.15f, sd2[idxA].binA, 0.5f, sd2[idxA].binB, 0.5f);
+		float b = getSinePartial3(phase01, 0.15f, sd2[idxB].binA, 0.5f, sd2[idxB].binB, 0.5f);
+		float result = LERP(a, b, rem);
+		return result;
+	}
+
+	inline float getSundial3(float phase01, float wt) {
+		int idxA = floorf(wt);
+		int idxB = idxA + 1;
+		float rem = wt - floorf(wt);
+		if (idxA < 0) {
+			idxA = NUM_FIBOGLIDE - 1;
+			idxB = 0;
+		}
+		if (idxB > NUM_FIBOGLIDE) {
+			idxB = 0;
+		}
+		float a = getSinePartial3(phase01, 0.5f, sd2[idxA].binA, 0.37f, sd2[idxA].binB, 0.37f);
+		float b = getSinePartial3(phase01, 0.5f, sd2[idxB].binA, 0.37f, sd2[idxB].binB, 0.37f);
+		float result = LERP(a, b, rem);
+		return result;
+	}
 
 	float cubicInterpolate(const float* buffer, float position) {
 		// Get the integer and fractional parts of the position.
@@ -291,9 +454,17 @@ struct GrainOsc : Module {
 		return (a0 * fracPos * fracPos * fracPos) + (a1 * fracPos * fracPos) + (a2 * fracPos) + a3;
 	}
 
-
 	float prevAmPhase;
 	float prevRootPhase;
+	float prevPhase02;
+	float morph = 0;
+	float warpLatched = 0;
+	float morphLatched = 0;
+	float outAmplitude = 5.0f;
+	bool gateLatched = false;
+	bool gate = false;
+	bool prevGate = false;
+	float warp;
 
 	float keytrackingMultiplier(float rootNote, float currentMidiNote) {
 		float interval = currentMidiNote - rootNote;
@@ -307,15 +478,48 @@ struct GrainOsc : Module {
 		//float freqMidi = floorf(params[FREQ_PARAM].getValue() * 127.0f - 64.0f);
 		//float baseMidi = params[BASEFREQ_PARAM].getValue() * 127.0f - 64.0f;
 		float amount = params[AMOUNT_PARAM].getValue();
-		float warp = params[WARP_PARAM].getValue();
 		int osc = floorf(params[OSC_PARAM].getValue());
 		int wavetable = floorf(params[WAVETABLE_PARAM].getValue());
+
+		morphLatched = params[MORPH_PARAM].getValue();
+		if (inputs[MORPH_INPUT].isConnected()) {
+			float morphInput = fabs(inputs[MORPH_INPUT].getVoltage(0));
+			morphLatched = fmod(morphLatched + morphInput, 1);
+			if (morphLatched < 0) {
+				morphLatched = 0;
+			}
+		}
+
+		warpLatched = params[WARP_PARAM].getValue();
+		if (inputs[WARP_INPUT].isConnected()) {
+			float warpInput = fabs(inputs[WARP_INPUT].getVoltage(0));
+			warpLatched = fmod(warpLatched + warpInput, 1);
+			if (warpLatched < 0) {
+				warpLatched = 0;
+			}
+		}
+
+		if (inputs[GATE_INPUT].isConnected()) {
+			float gateInput = fabs(inputs[GATE_INPUT].getVoltage(0));
+			gate = (gateInput > 1);
+			if (gate) {
+				if (prevGate != gate) {
+					oscAM.Reset();
+					oscRoot.Reset();
+				}
+			}
+			prevGate = gate;
+		}
+		else {
+			gate = true;
+			prevGate = true;
+		}
+
 
 		// 0.1 = 0 
 		// 0.24 = 32 
 
 		//int wave = floorf(params[MORPH_PARAM].getValue());
-		float wave = params[MORPH_PARAM].getValue();
 		float freq = mtof(freqMidi);
 		//float baseFreq = mtof(baseMidi);
 
@@ -326,12 +530,24 @@ struct GrainOsc : Module {
 		float multiplier = 0;
 		if (osc == OSC_GRAIN) {
 			oscRoot.SetFreq(freq);
-			multiplier = LERP(0.5, 8, warp);
+			//int idx = mapKnobToIndex(warp);
+			//multiplier = noteMultipliers[idx];
+			//multiplier = mapArpKnob(warp);
+			float m = mapMinorKnob(warp);
+			multiplier = setSlew(m, 0.0001, 0.0001);
+			//multiplier = noteMultipliers[idx];
+			//multiplier = LERP(0.5, 8, warp);
+			//multiplier = quantizeMultiplierToMinorScale(multiplier);
 		}
 		else {
 			oscRoot.SetFreq(65);
 			keytrack = keytrackingMultiplier(21+6, freqMidi);
-			multiplier = LERP(1, 8, warp);
+			//multiplier = LERP(1, 8, warp);
+			//multiplier = quantizeMultiplierToMinorScale(multiplier);
+			float m = mapMinorKnob(warp);
+			multiplier = setSlew(m, 0.0001, 0.0001);
+			//int idx = mapKnobToIndex(warp);
+			//multiplier = noteMultipliers[idx];
 		}
 
 		oscAM.SetFreq(freq * 0.5f);
@@ -364,6 +580,19 @@ struct GrainOsc : Module {
 		//float phase01 = oscRoot.GetPhase01();
 		//float phase02 = oscAM.GetPhase01() * 2.0f;
 		float phase02 = oscAM.GetPhase01();
+		if (prevPhase02 > phase02) {
+			morph = morphLatched;
+			warp = warpLatched;
+			gate = gateLatched;
+		}
+		if (gate) {
+			outAmplitude = 5.0f;
+		}
+		else {
+			outAmplitude *= 0.99f;
+		}
+		prevPhase02 = phase02;
+		
 		float phase = oscAM.GetPhase() * 2.0f;
 		//float offset = M_PI * amount; //M_PI/2;
 		float offset = M_PI/2.0f;
@@ -372,7 +601,11 @@ struct GrainOsc : Module {
 		float sinus1 = sinf(phase - offset);
 		float sinus3 = sinf((phase - offset) * 3.0f);
 		float sinus = LERP(sinus1, sinus3, 0.1f);
-		float outAM2 = (sinus + 0.81f) * 0.5f;
+		float outAM2 = (sinus + 0.80f) * 0.625f;
+		//float sa = 1.0f / 1.1f;
+		//float sb = 0.1f / 1.1f;
+		//float sinus = sa * sinus1 + sb * sinus3;
+		//float outAM2 = (sinus + 1) * 0.5f;
 
 		//float phase01 = phase02 + 1; //phase02 + 0.5;
 		//float outFibo = getFibo(phase01 * (BUFFER_SIZE - 1), wave * (NUM_FIBOGLIDE - 1));
@@ -389,19 +622,25 @@ struct GrainOsc : Module {
 		float am = outAM2;
 		switch (wavetable) {
 			case WAVETABLE_FIBOGLIDE:
-				outR = getFibo(phase01, wave * (NUM_FIBOGLIDE - 1)) * am;
+				outR = getFibo(phase01, morph * (NUM_FIBOGLIDE - 1)) * am;
 				break;
 			case WAVETABLE_HARMONICSWEEP:
-				outR = getHarmonicSweep(phase01, wave * (NUM_FIBOGLIDE - 1)) * am;
+				outR = getHarmonicSweep(phase01, morph * (NUM_FIBOGLIDE - 1)) * am;
+				break;
+			case WAVETABLE_SUNDIAL2:
+				outR = getSundial2(phase01, morph * (NUM_FIBOGLIDE - 1)) * am;
+				break;
+			case WAVETABLE_SUNDIAL3:
+				outR = getSundial3(phase01, morph * (NUM_FIBOGLIDE - 1)) * am;
 				break;
 			default:
 				outR = getPureSine(phase01) * am;
 				break;
 		}
-		float debug = keytrack; //getPureSine(phase01);
+		float debug = phase02; //getPureSine(phase01);
 
 		outputs[LEFT_OUTPUT].setVoltage(outAM2 * 5.0f);
-		outputs[RIGHT_OUTPUT].setVoltage(outR * 5.0f);
+		outputs[RIGHT_OUTPUT].setVoltage(outR * outAmplitude);
 		outputs[AM_OUTPUT].setVoltage(freqPhase * 5.0f);
 		outputs[AM2_OUTPUT].setVoltage(debug * 5.0f);
 	}
@@ -426,15 +665,17 @@ struct GrainOscWidget : ModuleWidget {
 
 		y = 142;
 		addParam(createParamCentered<RoundBlackKnob>(Vec(x0, y), module, GrainOsc::WAVETABLE_PARAM));
+		addInput(createInputCentered<PJ301MPort>(Vec(x1, y), module, GrainOsc::GATE_INPUT));
 		//addParam(createParamCentered<RoundBlackKnob>(Vec(x1, y), module, GrainOsc::ODD_DETUNE_PARAM));
 
 		y = 190;
-		addParam(createParamCentered<RoundBlackKnob>(Vec(x0, y), module, GrainOsc::AMOUNT_PARAM)); // PW
-		addParam(createParamCentered<RoundBlackKnob>(Vec(x1, y), module, GrainOsc::WARP_PARAM)); // PW
+		addParam(createParamCentered<RoundBlackKnob>(Vec(x0, y), module, GrainOsc::WARP_PARAM)); // PW
+		addInput(createInputCentered<PJ301MPort>(Vec(x1, y), module, GrainOsc::WARP_INPUT));
+		//addParam(createParamCentered<RoundBlackKnob>(Vec(x0, y), module, GrainOsc::AMOUNT_PARAM)); // PW
 
 		y = 238;
 		addParam(createParamCentered<RoundBlackKnob>(Vec(x0, y), module, GrainOsc::MORPH_PARAM));
-		//addParam(createParamCentered<RoundBlackKnob>(Vec(x1, y), module, GrainOsc::AM_MORPH_PARAM));
+		addInput(createInputCentered<PJ301MPort>(Vec(x1, y), module, GrainOsc::MORPH_INPUT));
 
 		y = 296;
 		//addOutput(createOutputCentered<PJ301MPort>(Vec(x0, y), module, GrainOsc::MODULATOR_OUTPUT));
