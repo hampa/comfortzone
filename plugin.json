@@ -1,7 +1,7 @@
 {
   "slug": "Comfortzone",
   "name": "Comfortzone",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "license": "GPL-3.0-or-later",
   "brand": "Comfortzone",
   "author": "hampa",
@@ -47,6 +47,18 @@
       "slug": "lazerbubbles",
       "name": "LazerBubbles",
       "description": "Psy Lazers and Bubbles",
+      "tags": ["Oscillator"]
+    },
+    {
+      "slug": "trick",
+      "name": "Trick",
+      "description": "The Trick",
+      "tags": ["Oscillator"]
+    },
+    {
+      "slug": "devvco",
+      "name": "DevVco",
+      "description": "Dev Vco",
       "tags": ["Oscillator"]
     },
     {

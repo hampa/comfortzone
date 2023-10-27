@@ -10,6 +10,8 @@ extern Model* modelGraintable;
 extern Model* modelLazerBubbles;
 extern Model* modelPartials;
 extern Model* modelGator;
+extern Model* modelTrick;
+extern Model* modelDevVco;
 
 void init(Plugin* p) {
 	pluginInstance = p;
@@ -22,4 +24,6 @@ void init(Plugin* p) {
 	p->addModel(modelLazerBubbles);
 	p->addModel(modelPartials);
 	p->addModel(modelGator);
+	p->addModel(modelTrick);
+	p->addModel(modelDevVco);
 }

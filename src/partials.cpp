@@ -124,6 +124,8 @@ struct Partials : Module {
                 float b = x - x * k;
                 return (b / a);
         }
+	int buffer_idx = 0;
+	float buffer[4096];
 
 	// serum wavetable
 	// p = 0 - 1
@@ -132,20 +134,25 @@ struct Partials : Module {
 	void process(const ProcessArgs& args) override {
 		float phaseOffsetParam = params[PHASE_OFFSET_PARAM].getValue();
 		float phaseIncParam = params[PHASE_INC_PARAM].getValue();
+		float fmAmount = params[FM_AMOUNT_PARAM].getValue();
 		float fmMidi = params[FM_FREQ_PARAM].getValue() * 127.0f - 64.0f;
 		float fmFreq = mtof(fmMidi);
 		float delta = fmFreq * samplerateInv;
 
-		//float fCV = 0;
-		//float inc = 1.0f/8.0f;
+		float fCV = 0;
+		float inc = 1.0f/8.0f;
 
-		//oscFm.SetFreq(fmFreq);
-		//float fm = oscFm.Process() * fmAmount;
+		oscFm.SetFreq(fmFreq);
+		float fm = oscFm.Process() * fmAmount;
 
 		float fOut = 0;
 		float phaseInc = phaseOffsetParam;
 		float offset = 0;
+		int partials_start = 0;
+		int partials_skip = 3;
+		float num_used_partials = 0;
 		for (int i = 1; i < NUM_OSC; i++) {
+			/*
 			float o = getOvertone(i, phase01, -offset * TWOPI_F);
 
 			offset += phaseInc;
@@ -154,11 +161,17 @@ struct Partials : Module {
 				phaseInc += phaseIncParam;
 			}
 			fOut += o;
+			*/
 			//float freq = powf(2.0f, fCV + fm) * (32.703251f * 0.5f);
-			//osc[i].SetFreq(freq);
-			//partials[i] = osc[i].Process();
-			//fOut += partials[i];
+			float freq = powf(2.0f, fCV + fm) * (32.703251f * 0.5f);
+			osc[i].SetFreq(freq);
+			partials[i] = osc[i].Process();
+			if (((partials_start + i) % partials_skip) == 0) {
+				fOut += partials[i];
+				num_used_partials += 1.0f;
+			}
 			//fCV += inc;
+			fCV += 0.1f + phaseIncParam;
 		}
 		//DEBUG("%f", fOut);
 
@@ -167,9 +180,13 @@ struct Partials : Module {
 
 
 		//fOut /= (float)NUM_OSC;
-
-		outputs[FM_LEFT_OUTPUT].setVoltage(fOut * 2.5f);
+		fOut /= num_used_partials; 
+		float bufferOut = buffer[buffer_idx];
+		outputs[FM_LEFT_OUTPUT].setVoltage(bufferOut);
 		outputs[FM_RIGHT_OUTPUT].setVoltage(fOut * 2.5f);
+		buffer_idx++;
+		if (buffer_idx > 4096)
+			buffer_idx = 0;
 	}
 };
 
@@ -195,8 +212,8 @@ struct PartialsWidget : ModuleWidget {
 		//addInput(createInputCentered<PJ301MPort>(Vec(x1, y), module, Partials::PHASER_OFFSET_INPUT));
 
 		y = 190;
-		addParam(createParamCentered<RoundBlackKnob>(Vec(x0, y), module, Partials::FM_FREQ_PARAM));
-		addParam(createParamCentered<RoundBlackKnob>(Vec(x1, y), module, Partials::FM_AMOUNT_PARAM));
+		//addParam(createParamCentered<RoundBlackKnob>(Vec(x0, y), module, Partials::FM_FREQ_PARAM));
+		//addParam(createParamCentered<RoundBlackKnob>(Vec(x1, y), module, Partials::FM_AMOUNT_PARAM));
 
 		y = 238;
 		//addParam(createParamCentered<RoundBlackKnob>(Vec(x0, y), module, Partials::MODULATOR_OCTAVE_PARAM));
@@ -205,6 +222,8 @@ struct PartialsWidget : ModuleWidget {
 		y = 296;
 		//addOutput(createOutputCentered<PJ301MPort>(Vec(x0, y), module, Partials::MODULATOR_OUTPUT));
 		//addOutput(createOutputCentered<PJ301MPort>(Vec(x1, y), module, Partials::CARRIER_OUTPUT));
+		addParam(createParamCentered<RoundBlackKnob>(Vec(x0, y), module, Partials::FM_FREQ_PARAM));
+		addParam(createParamCentered<RoundBlackKnob>(Vec(x1, y), module, Partials::FM_AMOUNT_PARAM));
 
 		y = 344;
 		addOutput(createOutputCentered<PJ301MPort>(Vec(x0, y), module, Partials::FM_LEFT_OUTPUT));
