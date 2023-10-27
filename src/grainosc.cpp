@@ -3,6 +3,7 @@
 #include <math.h>
 
 #define LERP(a, b, f) (a * (1.0f - f)) + (b * f)
+#define CLAMP(x, low, high)  (((x) > (high)) ? (high) : (((x) < (low)) ? (low) : (x)))
 
 struct GrainOsc : Module {
 	enum ParamIds {
@@ -293,7 +294,7 @@ struct GrainOsc : Module {
 	}
 
 
-	float minorMultiplier[43] = {
+	float minorMultiplier_OLD[43] = {
 		// 2nd octave down
 		0.25, 0.280625, 0.2973, 0.3337, 0.374575, 0.39685, 0.44545,
 		// 1st octave down
@@ -310,22 +311,92 @@ struct GrainOsc : Module {
 		9.0f
 	};
 
+
+	float minorMultiplier[85] = {
+		0.5000,     0.5612,     0.5946,     0.6674,     0.7491,     0.7937,     0.8909,
+		1.0000,     1.1225,     1.1892,     1.3348,     1.4983,     1.5874,     1.7818,
+		2.0000,     2.2450,     2.3784,     2.6696,     2.9966,     3.1748,     3.5636,
+		4.0000,     4.4900,     4.7568,     5.3392,     5.9932,     6.3496,     7.1272,
+		8.0000,     8.9800,     9.5136,     10.6784,     11.9864,     12.6992,     14.2544,
+		16.0000,     17.9600,     19.0272,     21.3568,     23.9728,     25.3984,     28.5088,
+		32.0000,     35.9200,     38.0544,     42.7136,     47.9456,     50.7968,     57.0176,
+		64.0000,     71.8400,     76.1088,     85.4272,     95.8912,     101.5936,     114.0352,
+		128.0000,     143.6800,     152.2176,     170.8544,     191.7824,     203.1872,     228.0704,
+    		256.0000,  287.3600,     304.4352,     341.7088,     383.5648,     406.3744,     456.1408,
+		512,     574.7200,     608.8704,     683.4176,     767.1296,     812.7488,     912.2816,
+    		1024.0000,     1149.4399,     1217.7408,     1366.8352,     1534.2592,     1625.4976,     1824.5632,
+		2048
+	};
+
+	/*
+	float arpeggioNoteMultipliers[36] = {
+		// 1 octave down
+		0.5, 0.5946, 0.74915, 0.8909,
+		// Base octave
+		1.0, 1.1892, 1.4983, 1.7818,
+		// 1 octave up
+		2.0, 2.3784, 2.9966, 3.5636,
+		// 2 octaves up
+		4.0, 4.7568, 5.9932, 7.1272,
+		// 3 octaves up
+		8.0, 9.5136, 11.9864, 14.2544,
+		// 4 octaves up
+		16.0, 19.0272, 23.9728, 28.5088,
+		// 5 octaves up
+		32.0, 38.0544, 47.9456, 57.0176,
+		// 6 octaves up
+		64.0, 76.1088, 95.8912, 114.0352,
+		// 7 octaves up
+		128.0, 152.2176, 191.7824, 228.0704,
+		// 8 octaves up
+    		256.0, 304.4352, 383.5648, 456.1408
+	};
+	*/
+
 	float mapArpKnob(float value) {
 		int idx = mapKnobToIndex(value, 8, 25);
 		return arpMultiplier[idx];
 	}
 
 	float mapMinorKnob(float value) {
-		int idx = mapKnobToIndex(value, 14, 43);
+		//int idx = mapKnobToIndex(value, 14, 43);
+		int idx = mapKnobToIndex(value, 7, 85);
 		return minorMultiplier[idx];
 	}
 
-	float setSlew(float target_value, float slew_up_rate, float slew_down_rate) {
+	float setMorphSlew(bool reset, float target_value, float slew_up_rate, float slew_down_rate) {
 		static float current_value = 0.0f;
+		if (reset) {
+			current_value = target_value;
+		}
 		float slew_rate = (target_value > current_value) ? slew_up_rate : slew_down_rate;
 		current_value += slew_rate * (target_value - current_value);
 		return current_value;
 	}
+
+	float setSlew(bool reset, float target_value, float slew_up_rate, float slew_down_rate) {
+		static float current_value = 0.0f;
+		if (reset) {
+			current_value = target_value;
+		}
+
+		// Calculate the difference
+		float difference = target_value - current_value;
+
+		// Use the absolute difference to modify the slew rate
+		float adaptive_slew = 1.0f + fabs(difference) * 0.2f; // the factor "0.1f" can be adjusted as per the desired responsiveness
+
+		// Decide on direction (up or down)
+		float base_slew_rate = (difference > 0) ? slew_up_rate : slew_down_rate;
+
+		// Apply the adaptive rate
+		float slew_rate = base_slew_rate * adaptive_slew;
+
+		current_value += slew_rate * difference;
+
+		return current_value;
+	}
+
 
 	// CENTER 8
 	float arpMultiplier[25] = {
@@ -343,8 +414,6 @@ struct GrainOsc : Module {
 		8.0, 9.5136, 11.9864, 14.2544,
 		9.0f
 	};
-
-
 
 	struct sundial_t {
 		int binA;
@@ -458,13 +527,16 @@ struct GrainOsc : Module {
 	float prevRootPhase;
 	float prevPhase02;
 	float morph = 0;
-	float warpLatched = 0;
-	float morphLatched = 0;
+	//float warpLatched = 0;
+	//float morphLatched = 0;
 	float outAmplitude = 5.0f;
-	bool gateLatched = false;
 	bool gate = false;
 	bool prevGate = false;
+	int grain_odd_idx = 0;
+	int grain_even_idx = 0;
+	int grain_idx = 0;
 	float warp;
+	float morph_target = 0;
 
 	float keytrackingMultiplier(float rootNote, float currentMidiNote) {
 		float interval = currentMidiNote - rootNote;
@@ -475,30 +547,15 @@ struct GrainOsc : Module {
 		float root_midi = 21.0f;
 		float coarse = floorf(params[FREQ_PARAM].getValue() * 12); 
 		float freqMidi = root_midi + coarse;
+		fmNote = floorf(root_midi + coarse);
+
 		//float freqMidi = floorf(params[FREQ_PARAM].getValue() * 127.0f - 64.0f);
 		//float baseMidi = params[BASEFREQ_PARAM].getValue() * 127.0f - 64.0f;
 		float amount = params[AMOUNT_PARAM].getValue();
 		int osc = floorf(params[OSC_PARAM].getValue());
 		int wavetable = floorf(params[WAVETABLE_PARAM].getValue());
 
-		morphLatched = params[MORPH_PARAM].getValue();
-		if (inputs[MORPH_INPUT].isConnected()) {
-			float morphInput = fabs(inputs[MORPH_INPUT].getVoltage(0));
-			morphLatched = fmod(morphLatched + morphInput, 1);
-			if (morphLatched < 0) {
-				morphLatched = 0;
-			}
-		}
-
-		warpLatched = params[WARP_PARAM].getValue();
-		if (inputs[WARP_INPUT].isConnected()) {
-			float warpInput = fabs(inputs[WARP_INPUT].getVoltage(0));
-			warpLatched = fmod(warpLatched + warpInput, 1);
-			if (warpLatched < 0) {
-				warpLatched = 0;
-			}
-		}
-
+		bool got_sh = false; 
 		if (inputs[GATE_INPUT].isConnected()) {
 			float gateInput = fabs(inputs[GATE_INPUT].getVoltage(0));
 			gate = (gateInput > 1);
@@ -506,6 +563,7 @@ struct GrainOsc : Module {
 				if (prevGate != gate) {
 					oscAM.Reset();
 					oscRoot.Reset();
+					got_sh = true;
 				}
 			}
 			prevGate = gate;
@@ -514,6 +572,19 @@ struct GrainOsc : Module {
 			gate = true;
 			prevGate = true;
 		}
+
+		warp = params[WARP_PARAM].getValue();
+		if (inputs[WARP_INPUT].isConnected()) {
+			float warpInput = inputs[WARP_INPUT].getVoltage(0) / 5.0f;
+			warp = CLAMP((warp + warpInput), 0, 1);
+		}
+
+		morph_target = params[MORPH_PARAM].getValue();
+		if (inputs[MORPH_INPUT].isConnected()) {
+			float morphInput = inputs[MORPH_INPUT].getVoltage(0) / 5.0f;
+			morph_target = CLAMP((morph_target + morphInput), 0, 1);
+		}
+		morph = setMorphSlew(got_sh, morph_target, 0.002f, 0.002f);
 
 
 		// 0.1 = 0 
@@ -534,7 +605,15 @@ struct GrainOsc : Module {
 			//multiplier = noteMultipliers[idx];
 			//multiplier = mapArpKnob(warp);
 			float m = mapMinorKnob(warp);
-			multiplier = setSlew(m, 0.0001, 0.0001);
+			//int grain_even_idx = mapKnobToIndex(warp, 7, 85);
+			//grain_odd_idx = grain_idx - 1;
+			//if (grain_odd_idx < 0) {
+		//		grain_odd_idx = 0;
+		//	}
+
+			//float target = minorMultiplier[grain_even_idx];
+			multiplier = setSlew(got_sh, m, 0.0001, 0.0001);
+			//0.94387
 			//multiplier = noteMultipliers[idx];
 			//multiplier = LERP(0.5, 8, warp);
 			//multiplier = quantizeMultiplierToMinorScale(multiplier);
@@ -545,7 +624,7 @@ struct GrainOsc : Module {
 			//multiplier = LERP(1, 8, warp);
 			//multiplier = quantizeMultiplierToMinorScale(multiplier);
 			float m = mapMinorKnob(warp);
-			multiplier = setSlew(m, 0.0001, 0.0001);
+			multiplier = setSlew(got_sh, m, 0.0001, 0.0001);
 			//int idx = mapKnobToIndex(warp);
 			//multiplier = noteMultipliers[idx];
 		}
@@ -581,9 +660,8 @@ struct GrainOsc : Module {
 		//float phase02 = oscAM.GetPhase01() * 2.0f;
 		float phase02 = oscAM.GetPhase01();
 		if (prevPhase02 > phase02) {
-			morph = morphLatched;
-			warp = warpLatched;
-			gate = gateLatched;
+			//morph = morphLatched;
+			//warp = warpLatched;
 		}
 		if (gate) {
 			outAmplitude = 5.0f;
@@ -602,6 +680,9 @@ struct GrainOsc : Module {
 		float sinus3 = sinf((phase - offset) * 3.0f);
 		float sinus = LERP(sinus1, sinus3, 0.1f);
 		float outAM2 = (sinus + 0.80f) * 0.625f;
+		if (outAM2 < 0.0001f) {
+			outAM2 = 0;
+		}
 		//float sa = 1.0f / 1.1f;
 		//float sb = 0.1f / 1.1f;
 		//float sinus = sa * sinus1 + sb * sinus3;
@@ -679,8 +760,9 @@ struct GrainOscWidget : ModuleWidget {
 
 		y = 296;
 		//addOutput(createOutputCentered<PJ301MPort>(Vec(x0, y), module, GrainOsc::MODULATOR_OUTPUT));
-		addOutput(createOutputCentered<PJ301MPort>(Vec(x0, y), module, GrainOsc::AM2_OUTPUT));
-		addOutput(createOutputCentered<PJ301MPort>(Vec(x1, y), module, GrainOsc::AM_OUTPUT));
+		//addOutput(createOutputCentered<PJ301MPort>(Vec(x1, y), module, GrainOsc::AM_OUTPUT));
+		addParam(createParamCentered<RoundBlackKnob>(Vec(x0, y), module, GrainOsc::AMOUNT_PARAM)); // PW
+		addOutput(createOutputCentered<PJ301MPort>(Vec(x1, y), module, GrainOsc::AM2_OUTPUT));
 
 		y = 344;
 		addOutput(createOutputCentered<PJ301MPort>(Vec(x0, y), module, GrainOsc::LEFT_OUTPUT));
