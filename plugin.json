@@ -59,6 +59,15 @@
       "slug": "devvco",
       "name": "DevVco",
       "description": "Dev Vco",
+      "slug": "dispersersaw",
+      "name": "DisperserSaw",
+      "description": "Disperser Saw",
+      "tags": ["Oscillator"]
+    },
+    {
+      "slug": "grainosc",
+      "name": "GrainOscillator",
+      "description": "Grain Oscillator",
       "tags": ["Oscillator"]
     },
     {

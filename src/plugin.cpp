@@ -12,6 +12,9 @@ extern Model* modelPartials;
 extern Model* modelGator;
 extern Model* modelTrick;
 extern Model* modelDevVco;
+extern Model* modelDisperserSaw;
+extern Model* modelGrainOsc;
+//extern Model* modelEQ3;
 
 void init(Plugin* p) {
 	pluginInstance = p;
@@ -26,4 +29,7 @@ void init(Plugin* p) {
 	p->addModel(modelGator);
 	p->addModel(modelTrick);
 	p->addModel(modelDevVco);
+	p->addModel(modelDisperserSaw);
+	p->addModel(modelGrainOsc);
+	//p->addModel(modelEQ3);
 }
