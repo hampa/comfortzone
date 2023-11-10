@@ -1,80 +1,89 @@
 {
-  "slug": "Comfortzone",
-  "name": "Comfortzone",
-  "version": "2.1.1",
-  "license": "GPL-3.0-or-later",
-  "brand": "Comfortzone",
-  "author": "hampa",
-  "authorEmail": "hampus@nabistudios.com",
-  "authorUrl": "https://github.com/hampa",
-  "pluginUrl": "",
-  "manualUrl": "https://github.com/hampa/comfortzone/blob/main/README.md",
-  "sourceUrl": "https://github.com/hampa/comfortzone",
-  "donateUrl": "",
-  "changelogUrl": "",
-  "modules": [
-    {
-      "slug": "kickbaba",
-      "name": "Kickbaba",
-      "description": "Psy Kick Bass",
-      "tags": ["Drum", "Oscillator"]
-    },
-    {
-      "slug": "tzfmlead",
-      "name": "TZFMLead",
-      "description": "Psy TZFM Lead",
-      "tags": ["Oscillator"]
-    },
-    {
-      "slug": "sundial",
-      "name": "Sundial",
-      "description": "Psy Sundial wavetable",
-      "tags": ["Oscillator"]
-    },
-    {
-      "slug": "graintable",
-      "name": "Graintable",
-      "description": "Psy Graintable",
-      "tags": ["Oscillator"]
-    },
-    {
-      "slug": "partials",
-      "name": "Partials",
-      "description": "Psy Partials",
-      "tags": ["Oscillator"]
-    },
-    {
-      "slug": "lazerbubbles",
-      "name": "LazerBubbles",
-      "description": "Psy Lazers and Bubbles",
-      "tags": ["Oscillator"]
-    },
-    {
-      "slug": "trick",
-      "name": "Trick",
-      "description": "The Trick",
-      "tags": ["Oscillator"]
-    },
-    {
-      "slug": "devvco",
-      "name": "DevVco",
-      "description": "Dev Vco",
-      "slug": "dispersersaw",
-      "name": "DisperserSaw",
-      "description": "Disperser Saw",
-      "tags": ["Oscillator"]
-    },
-    {
-      "slug": "grainosc",
-      "name": "GrainOscillator",
-      "description": "Grain Oscillator",
-      "tags": ["Oscillator"]
-    },
-    {
-      "slug": "gator",
-      "name": "Gator",
-      "description": "Psy Gate ADSR",
-      "tags": ["ADSR"]
-    }
-  ]
+	"slug": "Comfortzone",
+		"name": "Comfortzone",
+		"version": "2.1.1",
+		"license": "GPL-3.0-or-later",
+		"brand": "Comfortzone",
+		"author": "hampa",
+		"authorEmail": "hampus@nabistudios.com",
+		"authorUrl": "https://github.com/hampa",
+		"pluginUrl": "",
+		"manualUrl": "https://github.com/hampa/comfortzone/blob/main/README.md",
+		"sourceUrl": "https://github.com/hampa/comfortzone",
+		"donateUrl": "",
+		"changelogUrl": "",
+		"modules": [
+		{
+			"slug": "kickbaba",
+			"name": "Kickbaba",
+			"description": "Psy Kick Bass",
+			"tags": ["Drum", "Oscillator"]
+		},
+		{
+			"slug": "tzfmlead",
+			"name": "TZFMLead",
+			"description": "Psy TZFM Lead",
+			"tags": ["Oscillator"]
+		},
+		{
+			"slug": "sundial",
+			"name": "Sundial",
+			"description": "Psy Sundial wavetable",
+			"tags": ["Oscillator"]
+		},
+		{
+			"slug": "graintable",
+			"name": "Graintable",
+			"description": "Psy Graintable",
+			"tags": ["Oscillator"]
+		},
+		{
+			"slug": "partials",
+			"name": "Partials",
+			"description": "Psy Partials",
+			"tags": ["Oscillator"]
+		},
+		{
+			"slug": "lazerbubbles",
+			"name": "LazerBubbles",
+			"description": "Psy Lazers and Bubbles",
+			"tags": ["Oscillator"]
+		},
+		{
+			"slug": "trick",
+			"name": "Trick",
+			"description": "The Trick",
+			"tags": ["Oscillator"]
+		},
+		{
+			"slug": "devvco",
+			"name": "DevVco",
+			"description": "Dev Vco",
+			"tags": ["Oscillator"]
+		},
+		{
+			"slug": "dispersersaw",
+			"name": "DisperserSaw",
+			"description": "Disperser Saw",
+			"tags": ["Oscillator"]
+		},
+		{
+			"slug": "grainosc",
+			"name": "GrainOscillator",
+			"description": "Grain Oscillator",
+			"tags": ["Oscillator"]
+		},
+		{
+			"slug": "gator",
+			"name": "Gator",
+			"description": "Psy Gate ADSR",
+			"tags": ["ADSR"]
+		},
+		{
+			"slug": "groovebox",
+			"name": "GrooveBox",
+			"description": "Groove Box",
+			"tags": ["Sequencer"]
+		}
+	]
 }

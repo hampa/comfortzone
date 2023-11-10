@@ -98,7 +98,6 @@ struct GrainOsc : Module {
 		float f0 = sinf(phase) * bin0Vol;
 		float f1 = sinf(phase * binA) * binAVol;
 		float f2 = sinf(phase * binB) * binBVol;
-		//return LERP(f1, f2, 0.5f);
 		return f0 + f1 + f2;
 	}
 
@@ -380,23 +379,13 @@ struct GrainOsc : Module {
 			current_value = target_value;
 		}
 
-		// Calculate the difference
 		float difference = target_value - current_value;
-
-		// Use the absolute difference to modify the slew rate
 		float adaptive_slew = 1.0f + fabs(difference) * 0.2f; // the factor "0.1f" can be adjusted as per the desired responsiveness
-
-		// Decide on direction (up or down)
 		float base_slew_rate = (difference > 0) ? slew_up_rate : slew_down_rate;
-
-		// Apply the adaptive rate
 		float slew_rate = base_slew_rate * adaptive_slew;
-
 		current_value += slew_rate * difference;
-
 		return current_value;
 	}
-
 
 	// CENTER 8
 	float arpMultiplier[25] = {
