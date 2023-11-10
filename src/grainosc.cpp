@@ -109,6 +109,7 @@ struct GrainOsc : Module {
 	float fibobuf[NUM_FIBOGLIDE][BUFFER_SIZE];
 	int fibobin[NUM_FIBOGLIDE] = { 1,2,2,3,5,8,13,21,34,55,89,144 };
 	float fiboinv[NUM_FIBOGLIDE] = { 1,-1,-1,1, 1,-1,1,1,-1,1,1,-1 };
+	int sample_idx = 0;
 
 	GrainOsc () {
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
@@ -537,6 +538,9 @@ struct GrainOsc : Module {
 	int grain_idx = 0;
 	float warp;
 	float morph_target = 0;
+	float realOut = 0;
+	float outR = 0;
+	float decay = 1.0f;
 
 	float keytrackingMultiplier(float rootNote, float currentMidiNote) {
 		float interval = currentMidiNote - rootNote;
@@ -554,6 +558,7 @@ struct GrainOsc : Module {
 		float amount = params[AMOUNT_PARAM].getValue();
 		int osc = floorf(params[OSC_PARAM].getValue());
 		int wavetable = floorf(params[WAVETABLE_PARAM].getValue());
+		int redux = floorf(amount * 16);
 
 		bool got_sh = false; 
 		if (inputs[GATE_INPUT].isConnected()) {
@@ -563,7 +568,9 @@ struct GrainOsc : Module {
 				if (prevGate != gate) {
 					oscAM.Reset();
 					oscRoot.Reset();
+					sample_idx = 0;
 					got_sh = true;
+					outAmplitude = 5.0f;
 				}
 			}
 			prevGate = gate;
@@ -571,6 +578,7 @@ struct GrainOsc : Module {
 		else {
 			gate = true;
 			prevGate = true;
+			outAmplitude = 5.0f;
 		}
 
 		warp = params[WARP_PARAM].getValue();
@@ -663,12 +671,6 @@ struct GrainOsc : Module {
 			//morph = morphLatched;
 			//warp = warpLatched;
 		}
-		if (gate) {
-			outAmplitude = 5.0f;
-		}
-		else {
-			outAmplitude *= 0.99f;
-		}
 		prevPhase02 = phase02;
 		
 		float phase = oscAM.GetPhase() * 2.0f;
@@ -699,7 +701,6 @@ struct GrainOsc : Module {
 		}
 		float phase01 = freqPhase * multiplier * keytrack;
 		 
-		float outR = 0;
 		float am = outAM2;
 		switch (wavetable) {
 			case WAVETABLE_FIBOGLIDE:
@@ -718,12 +719,18 @@ struct GrainOsc : Module {
 				outR = getPureSine(phase01) * am;
 				break;
 		}
+		if (redux == 0 || (sample_idx % redux) == 0) {
+			realOut = outR;
+		}
+
 		float debug = phase02; //getPureSine(phase01);
 
 		outputs[LEFT_OUTPUT].setVoltage(outAM2 * 5.0f);
-		outputs[RIGHT_OUTPUT].setVoltage(outR * outAmplitude);
+		outputs[RIGHT_OUTPUT].setVoltage(realOut * outAmplitude);
 		outputs[AM_OUTPUT].setVoltage(freqPhase * 5.0f);
 		outputs[AM2_OUTPUT].setVoltage(debug * 5.0f);
+		outAmplitude *= 0.9999f;
+		sample_idx++;
 	}
 };
 
@@ -732,10 +739,10 @@ struct GrainOscWidget : ModuleWidget {
 
 	GrainOscWidget(GrainOsc* module) {
 		setModule(module);
-		setPanel(APP->window->loadSvg(asset::plugin(pluginInstance, "res/tzfmlead5HP.svg")));
+		setPanel(APP->window->loadSvg(asset::plugin(pluginInstance, "res/dev10HP.svg")));
 		addChild(createWidget<ScrewSilver>(Vec(RACK_GRID_WIDTH, 0)));
 
-		float spacingX = box.size.x / (float)4.0f;
+		float spacingX = box.size.x / (float)8.0f;
 		int x0 = spacingX;
 		int x1 = box.size.x - spacingX;
 
