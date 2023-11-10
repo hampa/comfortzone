@@ -170,6 +170,7 @@ struct Sundial : Module {
 				int p = wavetables[i][x];
 				//float freq = powf(2.0f, fCV + fm) * (32.703251f * 0.5f);
 				wtOsc[i][x].SetFreq((fmFreq * p) * (1.0f + fm));
+				//wtOsc[i][x].SetFreq(fmFreq * (i + 1.0f));
 			}
 		}
 
