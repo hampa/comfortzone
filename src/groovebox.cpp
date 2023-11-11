@@ -31,7 +31,7 @@ struct GroveBox : Module {
 	};
 
 	enum LightIds {
-		LIGHT0_LIGHT,
+		INVERT_LIGHT,
 		LIGHT1_LIGHT,
 		NUM_LIGHTS
 	};
@@ -76,6 +76,7 @@ struct GroveBox : Module {
 		float clock_input = inputs[CLOCK_INPUT].getVoltage(0);
 		float reset_input = inputs[RESET_INPUT].getVoltage(0);
 
+		params[0].setValue(0.5f);
 		bool have_clock = false;
 		if (prev_clock_input < 1 && clock_input > 1) {
 			have_clock = true;
@@ -102,17 +103,18 @@ struct GroveBox : Module {
 					gateon[i] = 0;
 				}
 			}
+			if (grooves[INST_OPEN_HIHAT][current_step]) {
+				gateon[INST_CLOSED_HIHAT] = 0;
+			}
 		}
-		else {
-			for (int i = 0; i < NUM_INST; i++) {
-				if (gateon[i] > 1) {
-					gateon[i]--;
-					amp[i] = 5;
-				}
-				else {
-					gateon[i] = 0;
-					amp[i] = 0;
-				}
+		for (int i = 0; i < NUM_INST; i++) {
+			if (gateon[i] > 1) {
+				gateon[i]--;
+				amp[i] = 5;
+			}
+			else {
+				gateon[i] = 0;
+				amp[i] = 0;
 			}
 		}
 
@@ -176,7 +178,12 @@ struct GroveBoxWidget : ModuleWidget {
 		for (int i = 0; i < 16; i++) {
 			int x = x2 + i * spacingX;
 			addParam(createParamCentered<BefacoTinyKnob>(Vec(x, y), module, i));
+
+			int y2 = y + 30;
+			addParam(createLightParamCentered<VCVLightLatch<MediumSimpleLight<WhiteLight>>>((Vec(x, y2)), module, i + 16, GroveBox::INVERT_LIGHT));
 		}
+
+		
 
 		labelPitch = createWidget<Label>(Vec(5, 90));
 		labelPitch->box.size = Vec(50, 50);
@@ -202,4 +209,4 @@ struct GroveBoxWidget : ModuleWidget {
 	}
 };
 
-Model* modelGroveBox = createModel<GroveBox, GroveBoxWidget>("grovebox");
+Model* modelGroveBox = createModel<GroveBox, GroveBoxWidget>("groovebox");

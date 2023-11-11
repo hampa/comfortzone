@@ -1,18 +1,18 @@
 {
 	"slug": "Comfortzone",
-		"name": "Comfortzone",
-		"version": "2.1.1",
-		"license": "GPL-3.0-or-later",
-		"brand": "Comfortzone",
-		"author": "hampa",
-		"authorEmail": "hampus@nabistudios.com",
-		"authorUrl": "https://github.com/hampa",
-		"pluginUrl": "",
-		"manualUrl": "https://github.com/hampa/comfortzone/blob/main/README.md",
-		"sourceUrl": "https://github.com/hampa/comfortzone",
-		"donateUrl": "",
-		"changelogUrl": "",
-		"modules": [
+	"name": "Comfortzone",
+	"version": "2.1.1",
+	"license": "GPL-3.0-or-later",
+	"brand": "Comfortzone",
+	"author": "hampa",
+	"authorEmail": "hampus@nabistudios.com",
+	"authorUrl": "https://github.com/hampa",
+	"pluginUrl": "",
+	"manualUrl": "https://github.com/hampa/comfortzone/blob/main/README.md",
+	"sourceUrl": "https://github.com/hampa/comfortzone",
+	"donateUrl": "",
+	"changelogUrl": "",
+	"modules": [
 		{
 			"slug": "kickbaba",
 			"name": "Kickbaba",
@@ -47,18 +47,6 @@
 			"slug": "lazerbubbles",
 			"name": "LazerBubbles",
 			"description": "Psy Lazers and Bubbles",
-			"tags": ["Oscillator"]
-		},
-		{
-			"slug": "trick",
-			"name": "Trick",
-			"description": "The Trick",
-			"tags": ["Oscillator"]
-		},
-		{
-			"slug": "devvco",
-			"name": "DevVco",
-			"description": "Dev Vco",
 			"tags": ["Oscillator"]
 		},
 		{
