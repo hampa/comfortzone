@@ -1,0 +1,5 @@
+No need to make a copy of terminal. Just make an alias in youruserdirectory/.zprofile like so:
+
+alias x64='arch -x86_64 zsh'
+Now save that and when you want to build for intel you just type x64 and enter and you are done.
+

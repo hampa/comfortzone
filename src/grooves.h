@@ -1,8 +1,9 @@
 #ifndef _GROOVES_H
 #define _GROOVES_H
 
+#include "tracks.h"
 
-const float bass_1[] = {
+const float kick_1[] = {
 1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,
 1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,
 1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,
@@ -56,13 +57,13 @@ const float open_hihat_1[] = {
 };
 
 enum {
-	INST_BASS,
+	INST_KICK,
 	INST_SNARE,
 	INST_CLOSED_HIHAT,
 	INST_OPEN_HIHAT,
 	NUM_INST
 };
 
-const float *grooves[] = { &bass_1[0], &snare_1[0], &close_hihat_1[0], &open_hihat_1[0] };
+const float *grooves[] = {&kick_1[0], &snare_1[0], &close_hihat_1[0], &open_hihat_1[0] };
 
 #endif

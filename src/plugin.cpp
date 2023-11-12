@@ -14,7 +14,7 @@ extern Model* modelGator;
 //extern Model* modelDevVco;
 extern Model* modelDisperserSaw;
 extern Model* modelGrainOsc;
-extern Model* modelGroveBox;
+extern Model* modelGrooveBox;
 //extern Model* modelEQ3;
 
 void init(Plugin* p) {
@@ -32,6 +32,6 @@ void init(Plugin* p) {
 	//p->addModel(modelDevVco);
 	p->addModel(modelDisperserSaw);
 	p->addModel(modelGrainOsc);
-	p->addModel(modelGroveBox);
+	p->addModel(modelGrooveBox);
 	//p->addModel(modelEQ3);
 }
