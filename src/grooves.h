@@ -64,6 +64,16 @@ enum {
 	NUM_INST
 };
 
-float *grooves[] = {&kick_1[0], &snare_1[0], &close_hihat_1[0], &open_hihat_1[0] };
+float *grooves_0[] = {&kick_1[0], &snare_1[0], &close_hihat_1[0], &open_hihat_1[0] };
+float *grooves_1[] = {&kick_1[0], &snare_1[0], &close_hihat_1[0], &open_hihat_1[0] };
+float *grooves_2[] = {&kick_1[0], &snare_1[0], &close_hihat_1[0], &open_hihat_1[0] };
+float *grooves_3[] = {&kick_1[0], &snare_1[0], &close_hihat_1[0], &open_hihat_1[0] };
+float *grooves_4[] = {&kick_1[0], &snare_1[0], &close_hihat_1[0], &open_hihat_1[0] };
+float *grooves_5[] = {&kick_1[0], &snare_1[0], &close_hihat_1[0], &open_hihat_1[0] };
+float *grooves_6[] = {&kick_1[0], &snare_1[0], &close_hihat_1[0], &open_hihat_1[0] };
+float *grooves_7[] = {&kick_1[0], &snare_1[0], &close_hihat_1[0], &open_hihat_1[0] };
+
+//float **grooves[] = { &grooves_0[0], &grooves_1[0], &grooves_2[0], &grooves_3[0], &grooves_4[0], &grooves_5[0], &grooves_6[0], &grooves_7[0] };
+float grooves[8][NUM_INST][64];
 
 #endif

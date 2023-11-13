@@ -6,7 +6,6 @@
 #define LERP(a, b, f) (a * (1.0f - f)) + (b * f)
 #define LOG0001 -9.210340371976182f // -80dB
 #define CLAMP(x, low, high)  (((x) > (high)) ? (high) : (((x) < (low)) ? (low) : (x)))
-#define NUM_PARAMS (64*NUM_INST+2)
 
 struct GrooveBox : Module {
 	enum ParamIds {
@@ -15,7 +14,10 @@ struct GrooveBox : Module {
 		CLOSED_HIHAT_PARAM = 128,
 		OPEN_HIHAT_PARAM = 192,
 		ALL_PARAMS = 256,
-		ROOT_NOTE_PARAM
+		ROOT_NOTE_PARAM,
+		SONG_PARAM,
+		SAVE_PARAM,
+		NUM_PARAMS
 	};
 
 	enum InputIds {
@@ -41,14 +43,16 @@ struct GrooveBox : Module {
 	};
 
 	enum LightIds {
-		NUM_LIGHTS = 256
+		NUM_LIGHTS = 256 
 	};
 
 	GrooveBox () {
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
 		configParam(ROOT_NOTE_PARAM, -12.0f, 12.f, 0, "Root Note", " Midi");
+		configParam(SONG_PARAM, 0, NUM_TRACKS - 1, 0, "Song", "");
+		configParam(SAVE_PARAM, 0, 1, 0, "Save", "");
 
-		for (int i = 0; i < NUM_PARAMS; i++) {
+		for (int i = 0; i < ALL_PARAMS; i++) {
 			configParam(i, 0, 1.0f, 0.0f, "k", "", 0.f, 127.0f);
 		}
 
@@ -60,8 +64,7 @@ struct GrooveBox : Module {
 	}
 
 	void onSampleRateChange(const SampleRateChangeEvent& e) override {
-		osc_melody.Init(e.sampleRate);
-		osc_bass.Init(e.sampleRate);
+		osc_melody.Init(e.sampleRate); osc_bass.Init(e.sampleRate);
 		osc_melody.SetWaveform(Oscillator::WAVE_SAW);
 		osc_bass.SetWaveform(Oscillator::WAVE_SAW);
 	}
@@ -78,6 +81,8 @@ struct GrooveBox : Module {
 	float melody_amp = 0;
 	float bass_freq = 110;
 	float melody_freq = 220;
+	int track_idx = 0;
+	int section_idx = 0;
 	Oscillator osc_bass;
 	Oscillator osc_melody;
 
@@ -89,28 +94,73 @@ struct GrooveBox : Module {
 		return CLAMP(min + (in * in) * (max - min), min, max);
 	}
 
+	void save_header(const char* headerName) {
+		FILE *headerFile = fopen(headerName, "w");
+		if (headerFile == NULL) {
+			perror("Error opening file");
+			return;
+		}
+
+		fprintf(headerFile, "float grooves[8][NUM_INST][64] = {\n");
+
+		for (int i = 0; i < 8; i++) {
+			fprintf(headerFile, "    {\n");
+			for (int j = 0; j < NUM_INST; j++) {
+				fprintf(headerFile, "        {");
+				for (int k = 0; k < 64; k++) {
+					float val = grooves[i][j][k];
+					if (val == 0) {
+						fprintf(headerFile, "0"); 
+					}
+					else {
+						fprintf(headerFile, "%.0f", val); 
+					}
+					if (k < 63) fprintf(headerFile, ", ");
+				}
+				fprintf(headerFile, "}%s\n", j < NUM_INST - 1 ? "," : "");
+			}
+			fprintf(headerFile, "    }%s\n", i < 7 ? "," : "");
+		}
+
+		fprintf(headerFile, "};\n");
+		fclose(headerFile);
+	}
+
 	inline float fmap_log(float in, float min, float max) {
 		const float a = 1.f / log10f(max / min);
 		return CLAMP(min * powf(10, in / a), min, max);
-        }
+	}
 
 	inline float mtof(float m) {
 		return powf(2, (m - 69.0f) / 12.0f) * 440.0f;
 	}
 	bool force_load = true;
+	bool force_save = false;
 
 	void process(const ProcessArgs& args) override {
 		float clock_input = inputs[CLOCK_INPUT].getVoltage(0);
 		float reset_input = inputs[RESET_INPUT].getVoltage(0);
 		float root_note = floorf((params[ROOT_NOTE_PARAM].getValue())) + 21;
+		int song = floorf(params[SONG_PARAM].getValue());
+		if (track_idx != song) {
+			track_idx = song;
+			force_load = true;
+		}
 
-		params[0].setValue(0.5f);
+		int save = floorf(params[SAVE_PARAM].getValue());
+		if (save && force_save == false) {
+			force_save = true;
+		}
+		if (force_save) {
+			save_header("/tmp/header.h");
+			force_save = false;
+		}
 
 		if (force_load) {
 			int p = 0;
 			for (int i = 0; i < NUM_INST; i++) {
 				for (int x = 0; x < 64; x++) {
-					params[p].setValue(grooves[i][x]);
+					params[p].setValue(grooves[track_idx][i][x]);
 					p++;
 				}
 			}
@@ -120,7 +170,7 @@ struct GrooveBox : Module {
 			int p = 0;
 			for (int i = 0; i < NUM_INST; i++) {
 				for (int x = 0; x < 64; x++) {
-					grooves[i][x] = params[p].getValue();
+					grooves[track_idx][i][x] = params[p].getValue();
 					p++;
 				}
 			}
@@ -132,6 +182,12 @@ struct GrooveBox : Module {
 			current_step++;
 			if (current_step >= 64) {
 				current_step = 0;
+				if (section_idx == 0) {
+					section_idx = 1;
+				}
+				else {
+					section_idx = 0;
+				}
 			}
 		}
 		if (prev_reset_input < 1 && reset_input > 1) {
@@ -140,7 +196,7 @@ struct GrooveBox : Module {
 
 		if (have_clock) {
 			for (int i = 0; i < NUM_INST; i++) {
-				float v = grooves[i][current_step];
+				float v = grooves[track_idx][i][current_step];
 				if (v > 0) {
 					gateon[i] = 30;
 					if (v > 1) {
@@ -152,7 +208,7 @@ struct GrooveBox : Module {
 					gateon[i] = 0;
 				}
 			}
-			if (grooves[INST_OPEN_HIHAT][current_step]) {
+			if (grooves[track_idx][INST_OPEN_HIHAT][current_step]) {
 				gateon[INST_CLOSED_HIHAT] = 0;
 			}
 			if (grooves[INST_KICK][current_step]) {
@@ -161,10 +217,9 @@ struct GrooveBox : Module {
 			else {
 				bass_gateon = 30;
 			}
-			int track_idx = 2;
-			int bass_note = bass_a[track_idx][current_step]; 
-			int melody_note = melody_a[track_idx][current_step];
-			int melody_vel = volume_a[track_idx][current_step];
+			int bass_note = bass_x[section_idx][track_idx][current_step]; 
+			int melody_note = melody_x[section_idx][track_idx][current_step];
+			int melody_vel = volume_x[section_idx][track_idx][current_step];
 			melody_freq = mtof(root_note + melody_note + 24); 
 			bass_freq = mtof(root_note + bass_note + 12); 
 			osc_melody.SetFreq(melody_freq);
@@ -258,10 +313,12 @@ struct GrooveBoxWidget : ModuleWidget {
 		addInput(createInputCentered<PJ301MPort>(Vec(x0, y), module, GrooveBox::CLOCK_INPUT));
 		addInput(createInputCentered<PJ301MPort>(Vec(x1, y), module, GrooveBox::RESET_INPUT));
 		addParam(createParamCentered<RoundBlackKnob>(Vec(x3, y), module, GrooveBox::ROOT_NOTE_PARAM));
+		addParam(createParamCentered<VCVButton>(Vec(x4, y), module, GrooveBox::SAVE_PARAM));
 
 		y = 142;
 		addOutput(createOutputCentered<PJ301MPort>(Vec(x0, y), module, GrooveBox::GATE_BASS_OUTPUT));
 		addOutput(createOutputCentered<PJ301MPort>(Vec(x1, y), module, GrooveBox::BASS_OUTPUT));
+		addParam(createParamCentered<RoundBlackKnob>(Vec(x3, y), module, GrooveBox::SONG_PARAM));
 
 		y = 170;
 		addOutput(createOutputCentered<PJ301MPort>(Vec(x0, y), module, GrooveBox::GATE_MELODY_OUTPUT));
@@ -315,9 +372,15 @@ struct GrooveBoxWidget : ModuleWidget {
 		addChild(labelPitch);
 	}
 
+	void addLightRow(GrooveBox *module, int x, int y, int param) {
+
+	}
+
+	float steppos[64];
 	void addRow(GrooveBox *module, int x, int y, int param) {
 		for (int i = 0; i < 64; i++) {
 			addParam(createLightParamCentered<VCVLightLatch<SmallSimpleLight<WhiteLight>>>((Vec(x, y)), module, param, param));
+			steppos[i] = x;
 			if (i == 0) {
 				x += 18;
 			}
@@ -348,6 +411,29 @@ struct GrooveBoxWidget : ModuleWidget {
 		}
 
 		ModuleWidget::step();
+	}
+
+	void draw(const DrawArgs &args) override {
+		ModuleWidget::draw(args);
+		if (module == NULL) {
+			return;
+		}
+		float x = steppos[current_step];
+		drawBox(args.vg, x, 80, 2, 2);
+	}
+
+	void drawBox(NVGcontext* vg, float x, float y, float width, float height) {
+		//nvgBeginFrame(vg, windowWidth, windowHeight, pixelRatio);
+
+		nvgFillColor(vg, nvgRGBA(255, 192, 0, 255));
+		nvgStrokeColor(vg, nvgRGBA(0, 0, 0, 255));
+		nvgStrokeWidth(vg, 2.0f);
+
+		nvgBeginPath(vg);
+		nvgRect(vg, x, y, width, height);
+		nvgFill(vg);
+		nvgStroke(vg);
+		//nvgEndFrame(vg);
 	}
 };
 

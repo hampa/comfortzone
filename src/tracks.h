@@ -76,6 +76,10 @@
  float *melody_a[NUM_TRACKS] = { mel1, mel2, mel3, mel4, mel5, mel6, mel7, mel8 };
  float *melody_b[NUM_TRACKS] = { mel1, mel10, mel11, mel12, mel13, mel14, mel15, mel16 }; 
 
+float **volume_x[2] = { &volume_a[0], &volume_b[0] };
+float **bass_x[2] =  { &bass_a[0], &bass_b[0] };
+float **melody_x[2] =  { &melody_a[0], &melody_b[0] };
+
 /*
 int main() {
 
