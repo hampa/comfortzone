@@ -6,11 +6,15 @@
 #define LERP(a, b, f) (a * (1.0f - f)) + (b * f)
 #define LOG0001 -9.210340371976182f // -80dB
 #define CLAMP(x, low, high)  (((x) > (high)) ? (high) : (((x) < (low)) ? (low) : (x)))
-#define NUM_PARAMS (16*NUM_INST+2)
+#define NUM_PARAMS (64*NUM_INST+2)
 
 struct GrooveBox : Module {
 	enum ParamIds {
-		//PATTERN_PARAM,
+		KICK_PARAM = 0,
+		SNARE_PARAM = 64,
+		CLOSED_HIHAT_PARAM = 128,
+		OPEN_HIHAT_PARAM = 192,
+		ALL_PARAMS = 256,
 		ROOT_NOTE_PARAM
 	};
 
@@ -37,9 +41,7 @@ struct GrooveBox : Module {
 	};
 
 	enum LightIds {
-		INVERT_LIGHT,
-		LIGHT1_LIGHT,
-		NUM_LIGHTS
+		NUM_LIGHTS = 256
 	};
 
 	GrooveBox () {
@@ -95,6 +97,7 @@ struct GrooveBox : Module {
 	inline float mtof(float m) {
 		return powf(2, (m - 69.0f) / 12.0f) * 440.0f;
 	}
+	bool force_load = true;
 
 	void process(const ProcessArgs& args) override {
 		float clock_input = inputs[CLOCK_INPUT].getVoltage(0);
@@ -102,6 +105,27 @@ struct GrooveBox : Module {
 		float root_note = floorf((params[ROOT_NOTE_PARAM].getValue())) + 21;
 
 		params[0].setValue(0.5f);
+
+		if (force_load) {
+			int p = 0;
+			for (int i = 0; i < NUM_INST; i++) {
+				for (int x = 0; x < 64; x++) {
+					params[p].setValue(grooves[i][x]);
+					p++;
+				}
+			}
+			force_load = false;
+		}
+		else {
+			int p = 0;
+			for (int i = 0; i < NUM_INST; i++) {
+				for (int x = 0; x < 64; x++) {
+					grooves[i][x] = params[p].getValue();
+					p++;
+				}
+			}
+		}
+
 		bool have_clock = false;
 		if (prev_clock_input < 1 && clock_input > 1) {
 			have_clock = true;
@@ -151,6 +175,13 @@ struct GrooveBox : Module {
 			else {
 				melody_gateon = 0;
 			}
+			int p = 0;
+			for (int i = 0; i < NUM_INST; i++) {
+				for (int x = 0; x < 64; x++) {
+					lights[p].setBrightness(params[p].getValue());
+					p++;
+				}
+			}
 		}
 
 		for (int i = 0; i < NUM_INST; i++) {
@@ -162,6 +193,7 @@ struct GrooveBox : Module {
 				gateon[i] = 0;
 				amp[i] = 0;
 			}
+			
 		}
 		if (bass_gateon > 1) {
 			bass_gateon--;
@@ -220,6 +252,7 @@ struct GrooveBoxWidget : ModuleWidget {
 		int x1 = x0 + spacingX;
 		int x2 = x1 + spacingX;
 		int x3 = x2 + spacingX;
+		int x4 = x3 + spacingX;
 
 		float y = 72;
 		addInput(createInputCentered<PJ301MPort>(Vec(x0, y), module, GrooveBox::CLOCK_INPUT));
@@ -237,31 +270,43 @@ struct GrooveBoxWidget : ModuleWidget {
 		y = 190;
 		addOutput(createOutputCentered<PJ301MPort>(Vec(x0, y), module, GrooveBox::GATE_OPEN_HIHAT_OUTPUT));
 		addOutput(createOutputCentered<PJ301MPort>(Vec(x1, y), module, GrooveBox::VEL_OPEN_HIHAT_OUTPUT));
+		addRow(module, x4, y, GrooveBox::OPEN_HIHAT_PARAM);
 
 		y = 238;
 		addOutput(createOutputCentered<PJ301MPort>(Vec(x0, y), module, GrooveBox::GATE_CLOSED_HIHAT_OUTPUT));
 		addOutput(createOutputCentered<PJ301MPort>(Vec(x1, y), module, GrooveBox::VEL_CLOSED_HIHAT_OUTPUT));
+		addRow(module, x4, y, GrooveBox::CLOSED_HIHAT_PARAM);
 
 		y = 296;
 		addOutput(createOutputCentered<PJ301MPort>(Vec(x0, y), module, GrooveBox::GATE_SNARE_OUTPUT));
 		addOutput(createOutputCentered<PJ301MPort>(Vec(x1, y), module, GrooveBox::VEL_SNARE_OUTPUT));
+		addRow(module, x4, y, GrooveBox::SNARE_PARAM);
 
 		y = 344;
 		addOutput(createOutputCentered<PJ301MPort>(Vec(x0, y), module, GrooveBox::GATE_KICK_OUTPUT));
 		addOutput(createOutputCentered<PJ301MPort>(Vec(x1, y), module, GrooveBox::VEL_KICK_OUTPUT));
+		addRow(module, x4, y, GrooveBox::KICK_PARAM);
+
 		//addInput(createInputCentered<PJ301MPort>(Vec(x0, y), module, GrooveBox::CLOCK_INPUT));
 		//addInput(createInputCentered<PJ301MPort>(Vec(x1, y), module, GrooveBox::RESET_INPUT));
 		//addOutput(createOutputCentered<PJ301MPort>(Vec(x1, y), module, GrooveBox::RIGHT_OUTPUT));
+			/*
 		y = 72;
-		for (int i = 0; i < 16; i++) {
-			int x = x3 + i * spacingX;
-			addParam(createParamCentered<BefacoTinyKnob>(Vec(x, y), module, i));
-
-			int y2 = y + 30;
-			addParam(createLightParamCentered<VCVLightLatch<MediumSimpleLight<WhiteLight>>>((Vec(x, y2)), module, i + 16, GrooveBox::INVERT_LIGHT));
+		spacingX = 18;
+		int param = 0;
+		int y2 = y + 30;
+		for (int z = 0; z < NUM_INST; z++) {
+			for (int i = 0; i < 64; i++) {
+				int x = x4 + i * spacingX;
+				//addParam(createParamCentered<BefacoTinyKnob>(Vec(x, y), module, i));
+				addParam(createLightParamCentered<VCVLightLatch<SmallSimpleLight<WhiteLight>>>((Vec(x, y2)), module, param, param));
+				param++;
+			}
+			y2 += 30;
 		}
+			*/
+		//addRow(module, x4, y2, 0);
 
-		
 
 		labelPitch = createWidget<Label>(Vec(5, 90));
 		labelPitch->box.size = Vec(50, 50);
@@ -270,19 +315,38 @@ struct GrooveBoxWidget : ModuleWidget {
 		addChild(labelPitch);
 	}
 
+	void addRow(GrooveBox *module, int x, int y, int param) {
+		for (int i = 0; i < 64; i++) {
+			addParam(createLightParamCentered<VCVLightLatch<SmallSimpleLight<WhiteLight>>>((Vec(x, y)), module, param, param));
+			if (i == 0) {
+				x += 18;
+			}
+			else if ((i % 16) == 15) {
+				x += 30;
+			}
+			else if ((i % 4) == 3) { 
+				x += 22;
+			}
+			else { 
+				x += 18;
+			}
+			param++;
+		}
+	}
+
 	// color scheme Echo Icon Theme Palette in Inkscape
 	NVGcolor metallic2 = nvgRGBA(158, 171, 176, 255);
 	NVGcolor metallic4 = nvgRGBA(14, 35, 46, 255);
 	NVGcolor green1 = nvgRGBA(204, 255, 66, 255);
 	NVGcolor red1 = nvgRGBA(255, 65, 65, 255);
+	int current_step = 0;
 
 	void step() override {
-		/*
 		GrooveBox * module = dynamic_cast<GrooveBox*>(this->module);
 		if (module) {
-			labelPitch->text = module->getRootNoteName();
+			current_step = module->current_step;
 		}
-		*/
+
 		ModuleWidget::step();
 	}
 };
