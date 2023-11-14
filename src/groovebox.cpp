@@ -15,7 +15,8 @@ struct GrooveBox : Module {
 		OPEN_HIHAT_PARAM = 192,
 		ALL_PARAMS = 256,
 		ROOT_NOTE_PARAM,
-		SONG_PARAM,
+		SONG_A_PARAM,
+		SONG_B_PARAM,
 		SAVE_PARAM,
 		NUM_PARAMS
 	};
@@ -49,7 +50,8 @@ struct GrooveBox : Module {
 	GrooveBox () {
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
 		configParam(ROOT_NOTE_PARAM, -12.0f, 12.f, 0, "Root Note", " Midi");
-		configParam(SONG_PARAM, 0, NUM_TRACKS - 1, 0, "Song", "");
+		configParam(SONG_A_PARAM, 0, NUM_TRACKS - 1, 0, "Song A", "");
+		configParam(SONG_B_PARAM, 0, NUM_TRACKS - 1, 0, "Song B", "");
 		configParam(SAVE_PARAM, 0, 1, 0, "Save", "");
 
 		for (int i = 0; i < ALL_PARAMS; i++) {
@@ -81,7 +83,8 @@ struct GrooveBox : Module {
 	float melody_amp = 0;
 	float bass_freq = 110;
 	float melody_freq = 220;
-	int track_idx = 0;
+	int track_a_idx = 0;
+	int track_b_idx = 0;
 	int section_idx = 0;
 	Oscillator osc_bass;
 	Oscillator osc_melody;
@@ -141,9 +144,10 @@ struct GrooveBox : Module {
 		float clock_input = inputs[CLOCK_INPUT].getVoltage(0);
 		float reset_input = inputs[RESET_INPUT].getVoltage(0);
 		float root_note = floorf((params[ROOT_NOTE_PARAM].getValue())) + 21;
-		int song = floorf(params[SONG_PARAM].getValue());
-		if (track_idx != song) {
-			track_idx = song;
+		int song_a = floorf(params[SONG_A_PARAM].getValue());
+		int track_b_idx = floorf(params[SONG_B_PARAM].getValue());
+		if (track_a_idx != song_a) {
+			track_a_idx = song_a;
 			force_load = true;
 		}
 
@@ -160,7 +164,7 @@ struct GrooveBox : Module {
 			int p = 0;
 			for (int i = 0; i < NUM_INST; i++) {
 				for (int x = 0; x < 64; x++) {
-					params[p].setValue(grooves[track_idx][i][x]);
+					params[p].setValue(grooves[track_a_idx][i][x]);
 					p++;
 				}
 			}
@@ -170,7 +174,7 @@ struct GrooveBox : Module {
 			int p = 0;
 			for (int i = 0; i < NUM_INST; i++) {
 				for (int x = 0; x < 64; x++) {
-					grooves[track_idx][i][x] = params[p].getValue();
+					grooves[track_a_idx][i][x] = params[p].getValue();
 					p++;
 				}
 			}
@@ -196,7 +200,7 @@ struct GrooveBox : Module {
 
 		if (have_clock) {
 			for (int i = 0; i < NUM_INST; i++) {
-				float v = grooves[track_idx][i][current_step];
+				float v = grooves[track_a_idx][i][current_step];
 				if (v > 0) {
 					gateon[i] = 30;
 					if (v > 1) {
@@ -208,18 +212,26 @@ struct GrooveBox : Module {
 					gateon[i] = 0;
 				}
 			}
-			if (grooves[track_idx][INST_OPEN_HIHAT][current_step]) {
+			if (grooves[track_a_idx][INST_OPEN_HIHAT][current_step]) {
 				gateon[INST_CLOSED_HIHAT] = 0;
 			}
-			if (grooves[INST_KICK][current_step]) {
+			if (grooves[track_a_idx][INST_KICK][current_step]) {
 				bass_gateon = 0;
 			}
 			else {
 				bass_gateon = 30;
 			}
-			int bass_note = bass_x[section_idx][track_idx][current_step]; 
-			int melody_note = melody_x[section_idx][track_idx][current_step];
-			int melody_vel = volume_x[section_idx][track_idx][current_step];
+			int bass_note, melody_note, melody_vel;
+			if (section_idx == 0) {
+				bass_note = bass_a[track_a_idx][current_step]; 
+				melody_note = melody_a[track_a_idx][current_step];
+				melody_vel = volume_a[track_a_idx][current_step];
+			}
+			else {
+				bass_note = bass_b[track_b_idx][current_step]; 
+				melody_note = melody_b[track_b_idx][current_step];
+				melody_vel = volume_b[track_b_idx][current_step];
+			}
 			melody_freq = mtof(root_note + melody_note + 24); 
 			bass_freq = mtof(root_note + bass_note + 12); 
 			osc_melody.SetFreq(melody_freq);
@@ -318,7 +330,8 @@ struct GrooveBoxWidget : ModuleWidget {
 		y = 142;
 		addOutput(createOutputCentered<PJ301MPort>(Vec(x0, y), module, GrooveBox::GATE_BASS_OUTPUT));
 		addOutput(createOutputCentered<PJ301MPort>(Vec(x1, y), module, GrooveBox::BASS_OUTPUT));
-		addParam(createParamCentered<RoundBlackKnob>(Vec(x3, y), module, GrooveBox::SONG_PARAM));
+		addParam(createParamCentered<RoundBlackKnob>(Vec(x3, y), module, GrooveBox::SONG_A_PARAM));
+		addParam(createParamCentered<RoundBlackKnob>(Vec(x4, y), module, GrooveBox::SONG_B_PARAM));
 
 		y = 170;
 		addOutput(createOutputCentered<PJ301MPort>(Vec(x0, y), module, GrooveBox::GATE_MELODY_OUTPUT));
