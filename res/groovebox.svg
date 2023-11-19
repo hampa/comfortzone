@@ -312,9 +312,9 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="0.9485195"
-     inkscape:cx="376.37603"
-     inkscape:cy="265.15006"
+     inkscape:zoom="1.897039"
+     inkscape:cx="210.85492"
+     inkscape:cy="250.12664"
      inkscape:document-units="mm"
      inkscape:current-layer="g1234"
      inkscape:document-rotation="0"
@@ -379,7 +379,8 @@
      inkscape:label="Background5HP"
      id="g1234"
      inkscape:groupmode="layer"
-     sodipodi:insensitive="true">
+     sodipodi:insensitive="true"
+     transform="matrix(1.8426277,0,0,0.99839482,0.16797217,0.09101296)">
     <rect
        y="0.19737133"
        x="0.19737133"
@@ -552,9 +553,9 @@
          style="font-size:3.52778px;line-height:1.25;font-family:sans-serif;white-space:pre;shape-inside:url(#rect8568);display:inline"><tspan
            x="3.3066406"
            y="70.857173"
-           id="tspan2"><tspan
+           id="tspan9"><tspan
              dx="0 2.1273479 1.4848371 2.1049547 2.4632449"
-             id="tspan1">PITCH</tspan></tspan></text>
+             id="tspan8">PITCH</tspan></tspan></text>
       <text
          xml:space="preserve"
          style="font-style:normal;font-variant:normal;font-weight:300;font-stretch:normal;font-size:2.82222px;line-height:1.25;font-family:'LEMON MILK';-inkscape-font-specification:'LEMON MILK Light';fill:#2d2d2d;stroke-width:0.264583"
@@ -635,20 +636,20 @@
          transform="translate(-6.1136178,-10.510041)"><tspan
            x="6.3496094"
            y="20.246547"
-           id="tspan5"><tspan
+           id="tspan12"><tspan
              style="fill:#1a1a1a"
-             id="tspan3">TZFM</tspan><tspan
+             id="tspan10">TZFM</tspan><tspan
              style="fill:#ff4141"
-             id="tspan4">LEAD</tspan></tspan></text>
+             id="tspan11">LEAD</tspan></tspan></text>
     </g>
   </g>
   <g
      inkscape:label="ALLTEXT TEXT"
      id="g44734"
      inkscape:groupmode="layer"
-     style="display:inline">
+     style="display:none">
     <g
-       style="display:inline"
+       style="display:none"
        inkscape:groupmode="layer"
        id="g44686"
        inkscape:label="MOD CAR LEFT RIGHT">
@@ -805,9 +806,9 @@
          style="font-size:3.52778px;line-height:1.25;font-family:sans-serif;white-space:pre;shape-inside:url(#rect44736);display:inline"><tspan
            x="3.3066406"
            y="70.857173"
-           id="tspan7"><tspan
+           id="tspan14"><tspan
              dx="0 2.1273479 1.4848371 2.1049547 2.4632449"
-             id="tspan6">PITCH</tspan></tspan></text>
+             id="tspan13">PITCH</tspan></tspan></text>
       <g
          aria-label="OCTAVES"
          id="text44702"
@@ -1055,15 +1056,15 @@
       <ellipse
          ry="4.5974541"
          rx="4.8291545"
-         cy="100.39058"
+         cy="104.4062"
          cx="19.049999"
          id="ellipse4711"
          style="fill:#9eabb0;stroke:#bdcdd4;stroke-width:0.0877121" />
       <ellipse
          style="fill:#9eabb0;stroke:#bdcdd4;stroke-width:0.0877121"
          id="ellipse4713"
-         cx="6.3499999"
-         cy="100.39058"
+         cx="6.3500004"
+         cy="104.4062"
          rx="4.8291545"
          ry="4.5974541" />
     </g>
@@ -1075,15 +1076,15 @@
       <ellipse
          ry="4.5974541"
          rx="4.8291545"
-         cy="80.312485"
+         cy="92.47876"
          cx="19.049999"
          id="ellipse4686"
          style="fill:#9eabb0;stroke:#bdcdd4;stroke-width:0.0877121" />
       <ellipse
          style="fill:#9eabb0;stroke:#bdcdd4;stroke-width:0.0877121"
          id="ellipse4688"
-         cx="6.3499999"
-         cy="80.312485"
+         cx="6.3500004"
+         cy="92.339005"
          rx="4.8291545"
          ry="4.5974541" />
     </g>
@@ -1095,15 +1096,15 @@
       <ellipse
          ry="4.5974541"
          rx="4.8291545"
-         cy="64.25"
+         cy="80.305588"
          cx="19.049999"
          id="ellipse4668"
          style="fill:#9eabb0;stroke:#bdcdd4;stroke-width:0.0877121" />
       <ellipse
          style="fill:#9eabb0;stroke:#bdcdd4;stroke-width:0.0877121"
          id="ellipse4670"
-         cx="6.3499999"
-         cy="64.25"
+         cx="6.2190914"
+         cy="80.305588"
          rx="4.8291545"
          ry="4.5974541" />
     </g>
@@ -1115,7 +1116,7 @@
       <ellipse
          ry="4.5974541"
          rx="4.8291545"
-         cy="24.093801"
+         cy="20.416214"
          cx="19.049999"
          id="ellipse13672"
          style="fill:#9eabb0;stroke:#bdcdd4;stroke-width:0.0877121" />
@@ -1123,22 +1124,124 @@
          style="fill:#9eabb0;stroke:#bdcdd4;stroke-width:0.0877121"
          id="ellipse13674"
          cx="6.3499999"
-         cy="24.093801"
+         cy="20.044067"
          rx="4.8291545"
          ry="4.5974541" />
       <ellipse
          ry="4.5974541"
          rx="4.8291545"
-         cy="48.187523"
+         cy="68.736855"
          cx="19.049999"
          id="ellipse19029"
          style="fill:#9eabb0;stroke:#bdcdd4;stroke-width:0.0877121" />
       <ellipse
          ry="4.5974541"
          rx="4.8291545"
-         cy="48.187523"
-         cx="6.3499999"
+         cy="68.750633"
+         cx="6.2190914"
          id="ellipse19031"
+         style="fill:#9eabb0;stroke:#bdcdd4;stroke-width:0.0877121" />
+    </g>
+    <g
+       inkscape:groupmode="layer"
+       id="g12"
+       inkscape:label="SketchKnobsTop copy"
+       style="display:inline">
+      <ellipse
+         ry="4.5974541"
+         rx="4.8291545"
+         cy="31.868752"
+         cx="19.049999"
+         id="ellipse9"
+         style="fill:#9eabb0;stroke:#bdcdd4;stroke-width:0.0877121" />
+      <ellipse
+         style="fill:#9eabb0;stroke:#bdcdd4;stroke-width:0.0877121"
+         id="ellipse10"
+         cx="6.3499999"
+         cy="31.543203"
+         rx="4.8291545"
+         ry="4.5974541" />
+      <ellipse
+         ry="4.5974541"
+         rx="4.8291545"
+         cy="68.736855"
+         cx="19.049999"
+         id="ellipse11"
+         style="fill:#9eabb0;stroke:#bdcdd4;stroke-width:0.0877121" />
+      <ellipse
+         ry="4.5974541"
+         rx="4.8291545"
+         cy="68.750633"
+         cx="6.2190914"
+         id="ellipse12"
+         style="fill:#9eabb0;stroke:#bdcdd4;stroke-width:0.0877121" />
+    </g>
+    <g
+       inkscape:groupmode="layer"
+       id="g8"
+       inkscape:label="SketchKnobsTop copy"
+       style="display:inline">
+      <ellipse
+         ry="4.5974541"
+         rx="4.8291545"
+         cy="44.158119"
+         cx="19.049999"
+         id="ellipse5"
+         style="fill:#9eabb0;stroke:#bdcdd4;stroke-width:0.0877121" />
+      <ellipse
+         style="fill:#9eabb0;stroke:#bdcdd4;stroke-width:0.0877121"
+         id="ellipse6"
+         cx="6.2190914"
+         cy="44.158119"
+         rx="4.8291545"
+         ry="4.5974541" />
+      <ellipse
+         ry="4.5974541"
+         rx="4.8291545"
+         cy="68.736855"
+         cx="19.049999"
+         id="ellipse7"
+         style="fill:#9eabb0;stroke:#bdcdd4;stroke-width:0.0877121" />
+      <ellipse
+         ry="4.5974541"
+         rx="4.8291545"
+         cy="68.750633"
+         cx="6.2190914"
+         id="ellipse8"
+         style="fill:#9eabb0;stroke:#bdcdd4;stroke-width:0.0877121" />
+    </g>
+    <g
+       inkscape:groupmode="layer"
+       id="g4"
+       inkscape:label="SketchKnobsTop copy"
+       style="display:inline">
+      <ellipse
+         ry="4.5974541"
+         rx="4.8291545"
+         cy="56.447487"
+         cx="19.049999"
+         id="ellipse1"
+         style="fill:#9eabb0;stroke:#bdcdd4;stroke-width:0.0877121" />
+      <ellipse
+         style="fill:#9eabb0;stroke:#bdcdd4;stroke-width:0.0877121"
+         id="ellipse2"
+         cx="6.2190914"
+         cy="56.215145"
+         rx="4.8291545"
+         ry="4.5974541" />
+      <ellipse
+         ry="4.5974541"
+         rx="4.8291545"
+         cy="68.736855"
+         cx="19.049999"
+         id="ellipse3"
+         style="fill:#9eabb0;stroke:#bdcdd4;stroke-width:0.0877121" />
+      <ellipse
+         ry="4.5974541"
+         rx="4.8291545"
+         cy="68.272171"
+         cx="6.2190914"
+         id="ellipse4"
          style="fill:#9eabb0;stroke:#bdcdd4;stroke-width:0.0877121" />
     </g>
   </g>
