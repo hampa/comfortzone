@@ -47,6 +47,8 @@ struct GrooveBox : Module {
 		NUM_LIGHTS = 256 
 	};
 
+	const char *db = "/tmp/g.txt";
+
 	GrooveBox () {
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
 		configParam(ROOT_NOTE_PARAM, -12.0f, 12.f, 0, "Root Note", " Midi");
@@ -60,9 +62,12 @@ struct GrooveBox : Module {
 
 		configInput(CLOCK_INPUT, "Clock Input");
 		configInput(RESET_INPUT, "Reset Input");
+
+		import_array(db);
 	}
 
 	~GrooveBox () {
+		export_array(db);
 	}
 
 	void onSampleRateChange(const SampleRateChangeEvent& e) override {
@@ -129,6 +134,46 @@ struct GrooveBox : Module {
 		fclose(headerFile);
 	}
 
+	void export_array(const char* filename) {
+		FILE *file = fopen(filename, "w");
+		if (file == NULL) {
+			perror("Error opening file");
+			return;
+		}
+
+		for (int i = 0; i < 8; i++) {
+			for (int j = 0; j < NUM_INST; j++) {
+				for (int k = 0; k < 64; k++) {
+					fprintf(file, "%.0f ", grooves[i][j][k]);
+				}
+				fprintf(file, "\n");
+			}
+		}
+
+		fclose(file);
+	}
+
+	void import_array(const char* filename) {
+		FILE *file = fopen(filename, "r");
+		if (file == NULL) {
+			perror("Error opening file");
+			return;
+		}
+
+		for (int i = 0; i < 8; i++) {
+			for (int j = 0; j < NUM_INST; j++) {
+				for (int k = 0; k < 64; k++) {
+					if (fscanf(file, "%f", &grooves[i][j][k]) != 1) {
+						fprintf(stderr, "Error reading value at [%d][%d][%d]\n", i, j, k);
+						fclose(file);
+						return;
+					}
+				}
+			}
+		}
+		fclose(file);
+	}
+
 	inline float fmap_log(float in, float min, float max) {
 		const float a = 1.f / log10f(max / min);
 		return CLAMP(min * powf(10, in / a), min, max);
@@ -157,6 +202,7 @@ struct GrooveBox : Module {
 		}
 		if (force_save) {
 			save_header("/tmp/header.h");
+			export_array(db);
 			force_save = false;
 		}
 
@@ -436,8 +482,6 @@ struct GrooveBoxWidget : ModuleWidget {
 	}
 
 	void drawBox(NVGcontext* vg, float x, float y, float width, float height) {
-		//nvgBeginFrame(vg, windowWidth, windowHeight, pixelRatio);
-
 		nvgFillColor(vg, nvgRGBA(255, 192, 0, 255));
 		nvgStrokeColor(vg, nvgRGBA(0, 0, 0, 255));
 		nvgStrokeWidth(vg, 2.0f);
@@ -446,7 +490,6 @@ struct GrooveBoxWidget : ModuleWidget {
 		nvgRect(vg, x, y, width, height);
 		nvgFill(vg);
 		nvgStroke(vg);
-		//nvgEndFrame(vg);
 	}
 };
 
