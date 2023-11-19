@@ -120,13 +120,13 @@ struct GrooveBox : Module {
 		fprintf(headerFile, "#define NUM_INST %i\n\n", NUM_INST);
 
 		fprintf(headerFile, "int tracks[NUM_TRACKS][NUM_TRACK_SETTINGS][64] = {\n");
-		for (int i = 0; i < NUM_GROOVES; i++) {
+		for (int i = 0; i < NUM_TRACKS; i++) {
 			fprintf(headerFile, "    {\n");
-			for (int j = 0; j < NUM_INST; j++) {
+			for (int j = 0; j < NUM_TRACK_SETTINGS; j++) {
 				fprintf(headerFile, "        {");
 				for (int k = 0; k < 64; k++) {
-					int val = tracks[i][j][k];
-					fprintf(headerFile, "%i", val); 
+					//int val = tracks[i][j][k];
+					fprintf(headerFile, "%i", tracks[i][j][k]); 
 					if (k < 63) fprintf(headerFile, ", ");
 				}
 				fprintf(headerFile, "}%s\n", j < NUM_INST - 1 ? "," : "");
@@ -184,7 +184,6 @@ struct GrooveBox : Module {
 				fprintf(file, "\n");
 			}
 		}
-
 		fclose(file);
 	}
 
