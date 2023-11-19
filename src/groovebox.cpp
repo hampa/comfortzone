@@ -6,6 +6,7 @@
 #define LERP(a, b, f) (a * (1.0f - f)) + (b * f)
 #define LOG0001 -9.210340371976182f // -80dB
 #define CLAMP(x, low, high)  (((x) > (high)) ? (high) : (((x) < (low)) ? (low) : (x)))
+
 enum {
 	SECTION_INTRO,
 	SECTION_VERSE,
@@ -15,8 +16,6 @@ enum {
 	NUM_SECTIONS
 };
 
-#define NUM_8BARS 64
-#define NUM_INST_PARAMS 384 
 #define SQUARE_SIZE 12
 
 struct GrooveBox : Module {
@@ -64,10 +63,8 @@ struct GrooveBox : Module {
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
 		configParam(ROOT_NOTE_PARAM, -12.0f, 12.f, 0, "Root Note", " Midi");
 		configParam(TRACK_PARAM, 0, NUM_TRACKS - 1, 0, "Track", "");
-		//configParam(GROOVE_PARAM, 0, NUM_GROOVES - 1, 0, "Groove", "");
 		configParam(SAVE_PARAM, 0, 1, 0, "Save", "");
 		configParam(LOOP_PARAM, 0, 1, 0, "Loop", "");
-		//configParam(MELODY_PARAM, 0, NUM_MELODIES - 1, 0, "Melody", "");
 		configInput(CLOCK_INPUT, "Clock Input");
 		configInput(RESET_INPUT, "Reset Input");
 
@@ -778,8 +775,6 @@ struct GrooveBoxWidget : ModuleWidget {
 		y = 272;
 		addOutput(createOutputCentered<PJ301MPort>(Vec(x0, y), module, GrooveBox::GATE_CLOSED_HIHAT_OUTPUT));
 		addOutput(createOutputCentered<PJ301MPort>(Vec(x1, y), module, GrooveBox::VEL_CLOSED_HIHAT_OUTPUT));
-		//addParam(createParamCentered<RoundBlackKnob>(Vec(x2, y), module, GrooveBox::MELODY_PARAM));
-		//addRow(module, x4, y, GrooveBox::CLOSED_HIHAT_PARAM);
 
 		y = 308;
 		addOutput(createOutputCentered<PJ301MPort>(Vec(x0, y), module, GrooveBox::GATE_SNARE_OUTPUT));
@@ -787,27 +782,26 @@ struct GrooveBoxWidget : ModuleWidget {
 		y = 344;
 		addOutput(createOutputCentered<PJ301MPort>(Vec(x0, y), module, GrooveBox::GATE_KICK_OUTPUT));
 
-		y = 100;
+		y = 90;
 		int x = 180;
+        	JumpButton *jumpButton = createWidget<JumpButton>(Vec(x, y));
+		jumpButton->module = module;
+        	addChild(jumpButton);
 
-        	SectionButton *sectionButton = createWidget<SectionButton>(Vec(x, y));
-		sectionButton->module = module;
-        	addChild(sectionButton);
-
-		y += sectionButton->getHeight() + 30;
+		y += jumpButton->getHeight() + 10;
 
         	SectionButton *melodyButton = createWidget<SectionButton>(Vec(x, y));
 		melodyButton->module = module;
 		melodyButton->config_idx = 1;
         	addChild(melodyButton);
 
-		y += sectionButton->getHeight() + 30;
+		y += melodyButton->getHeight() + 10;
 
-        	JumpButton *jumpButton = createWidget<JumpButton>(Vec(x, y));
-		jumpButton->module = module;
-        	addChild(jumpButton);
+        	SectionButton *sectionButton = createWidget<SectionButton>(Vec(x, y));
+		sectionButton->module = module;
+        	addChild(sectionButton);
 
-		y += jumpButton->getHeight() + 30;
+		y += sectionButton->getHeight() + 10;
 
         	BinButton *binButton= createWidget<BinButton>(Vec(x - 20, y));
 		binButton->module = module;
