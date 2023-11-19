@@ -57,16 +57,18 @@ float open_hihat_1[] = {
 };
 
 enum {
-	INST_KICK,
-	INST_SNARE,
-	INST_CLOSED_HIHAT,
-	INST_OPEN_HIHAT,
+	INST_PERC,
 	INST_CYMBAL,
-	INST_EXTRA,
+	INST_OPEN_HIHAT,
+	INST_CLOSED_HIHAT,
+	INST_SNARE,
+	INST_KICK,
 	NUM_INST
 };
 
-#define NUM_GROOVES 8
+#define NUM_GROOVES 16 
+#define NUM_TRACKS 8
+#define NUM_TRACK_SETTINGS 2
 
 float *grooves_0[] = {&kick_1[0], &snare_1[0], &close_hihat_1[0], &open_hihat_1[0] };
 float *grooves_1[] = {&kick_1[0], &snare_1[0], &close_hihat_1[0], &open_hihat_1[0] };
@@ -79,6 +81,7 @@ float *grooves_7[] = {&kick_1[0], &snare_1[0], &close_hihat_1[0], &open_hihat_1[
 
 //float **grooves[] = { &grooves_0[0], &grooves_1[0], &grooves_2[0], &grooves_3[0], &grooves_4[0], &grooves_5[0], &grooves_6[0], &grooves_7[0] };
 float grooves[NUM_GROOVES][NUM_INST][64];
-int tracks[8][2][64];
+
+int tracks[NUM_TRACKS][NUM_TRACK_SETTINGS][64];
 
 #endif

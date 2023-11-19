@@ -68,6 +68,7 @@
  float bas16[64] = {0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,3,3,3,3,3,3,3,3,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,3,3,3,3,3,3,3,3,1,1,1,1,1,1,1,1};
  float mel16[64] = {0,0,0,-4,-5,0,0,0,0,0,0,0,-4,-5,-5,-4,0,0,0,-4,-5,0,0,0,0,0,0,0,-4,-5,-5,-4,0,0,0,-4,-5,0,0,0,0,0,0,0,-4,-5,-5,-4,0,0,0,-4,-5,0,0,0,0,0,0,0,-4,-5,-5,-4};
 
+/*
 #define NUM_TRACKS 8
  float *volume_a[NUM_TRACKS] = { vol1, vol2, vol3, vol4, vol5, vol6, vol7, vol8 };
  float *volume_b[NUM_TRACKS] = { vol1, vol10, vol11, vol12, vol13, vol14, vol15, vol16 }; 
@@ -79,6 +80,7 @@
 float **volume_x[2] = { &volume_a[0], &volume_b[0] };
 float **bass_x[2] =  { &bass_a[0], &bass_b[0] };
 float **melody_x[2] =  { &melody_a[0], &melody_b[0] };
+*/
 
 #define NUM_MELODIES 16
 float *melodies[NUM_MELODIES] = { mel1, mel2, mel3, mel4, mel5, mel6, mel7, mel8, mel9, mel10, mel11, mel12, mel13, mel14, mel15, mel16 };
