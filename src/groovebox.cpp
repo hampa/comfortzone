@@ -113,15 +113,15 @@ struct GrooveBox : Module {
 
 	const char *get_path(const char  *filename) {
 		static char path[1024]; 
-		const char *doc = asset::user(pluginInstance->slug).c_str();
-		mkdir(doc);
+		//const char *doc = asset::user(pluginInstance->slug).c_str();
+		//mkdir(doc, 0777);
+		mkdir(asset::user(pluginInstance->slug).c_str(), 0777);
 		memset(path, 0, sizeof(path));
-		//strncpy(path, doc, sizeof(path) - 1);
-		//strncat(path, filename, sizeof(path) - strlen(path) - 1);
-		snprintf(path, sizeof(path), "%s/%s", doc, filename);
+		snprintf(path, sizeof(path), "%s/%s", asset::user(pluginInstance->slug).c_str(), filename);
 		return path;
 	}
 
+	/*
 	const char* get_path_old(const char *filename) {
 		static char path[1024]; // Large enough buffer for the path
 
@@ -139,6 +139,7 @@ struct GrooveBox : Module {
 
 		return path;
 	}
+	*/
 
 	void save_header(const char* headerName) {
 		FILE *headerFile = fopen(headerName, "w");
