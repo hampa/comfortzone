@@ -1,7 +1,9 @@
 #include "plugin.hpp"
 #include "grooves.h"
 #include "oscillator.h"
+#include <errno.h>
 #include <math.h>
+#include <sys/stat.h>
 
 #define LERP(a, b, f) (a * (1.0f - f)) + (b * f)
 #define LOG0001 -9.210340371976182f // -80dB
@@ -57,7 +59,7 @@ struct GrooveBox : Module {
 		NUM_LIGHTS 
 	};
 
-	const char *db = "/tmp/g.txt";
+	//const char *db = "gb.txt";
 
 	GrooveBox () {
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
@@ -68,11 +70,12 @@ struct GrooveBox : Module {
 		configInput(CLOCK_INPUT, "Clock Input");
 		configInput(RESET_INPUT, "Reset Input");
 
-		import_array(db);
+		import_array(get_path("db.txt"));
+		DEBUG("path : %s", get_path("db.txt"));
 	}
 
 	~GrooveBox () {
-		export_array(db);
+		export_array(get_path("db.txt"));
 	}
 
 	void onSampleRateChange(const SampleRateChangeEvent& e) override {
@@ -108,10 +111,39 @@ struct GrooveBox : Module {
 		return CLAMP(min + (in * in) * (max - min), min, max);
 	}
 
+	const char *get_path(const char  *filename) {
+		static char path[1024]; 
+		const char *doc = asset::user(pluginInstance->slug).c_str();
+		mkdir(doc);
+		memset(path, 0, sizeof(path));
+		//strncpy(path, doc, sizeof(path) - 1);
+		//strncat(path, filename, sizeof(path) - strlen(path) - 1);
+		snprintf(path, sizeof(path), "%s/%s", doc, filename);
+		return path;
+	}
+
+	const char* get_path_old(const char *filename) {
+		static char path[1024]; // Large enough buffer for the path
+
+		const char* documentsPath = rack::asset::user("").c_str(); // Get the user documents directory
+		const char* rackFolder = "/Rack"; // Subdirectory for Rack
+		const char* pluginFolder = "/plugins/Comfortzone/"; // Your plugin's specific folder
+
+		// Ensure the buffer is clear
+		memset(path, 0, sizeof(path));
+
+		strncpy(path, documentsPath, sizeof(path) - 1);
+		strncat(path, rackFolder, sizeof(path) - strlen(path) - 1);
+		strncat(path, pluginFolder, sizeof(path) - strlen(path) - 1);
+		strncat(path, filename, sizeof(path) - strlen(path) - 1);
+
+		return path;
+	}
+
 	void save_header(const char* headerName) {
 		FILE *headerFile = fopen(headerName, "w");
 		if (headerFile == NULL) {
-			perror("Error opening file");
+			DEBUG("Error opening file %s", strerror(errno));
 			return;
 		}
 		fprintf(headerFile, "#define NUM_TRACKS %i\n", NUM_TRACKS);
@@ -163,7 +195,7 @@ struct GrooveBox : Module {
 	void export_array(const char* filename) {
 		FILE *file = fopen(filename, "w");
 		if (file == NULL) {
-			perror("Error opening file");
+			DEBUG("Error opening file %s", strerror(errno));
 			return;
 		}
 
@@ -190,7 +222,7 @@ struct GrooveBox : Module {
 	void import_array(const char* filename) {
 		FILE *file = fopen(filename, "r");
 		if (file == NULL) {
-			perror("Error opening file");
+			DEBUG("Error opening file %s", strerror(errno));
 			return;
 		}
 
@@ -252,8 +284,9 @@ struct GrooveBox : Module {
 			force_save = true;
 		}
 		if (force_save) {
-			save_header("/tmp/header.h");
-			export_array(db);
+			//save_header("/tmp/header.h");
+			save_header(get_path("gb-header.h"));
+			export_array(get_path("db.txt"));
 			force_save = false;
 			params[SAVE_PARAM].setValue(0);
 		}
@@ -283,18 +316,37 @@ struct GrooveBox : Module {
 				float v = grooves[groove_idx][i][current_step];
 				if (v > 0) {
 					gateon[i] = 30;
+					/*
 					if (v > 1) {
 						v /= 127.0f;
 					}	
-					vel[i] = v * 5.0f;
+					*/
+					vel[i] = 5.0f;
 				}
 				else {
 					gateon[i] = 0;
 				}
 			}
-			if (grooves[groove_idx][INST_OPEN_HIHAT][current_step]) {
-				gateon[INST_CLOSED_HIHAT] = 0;
+			int oh = grooves[groove_idx][INST_OPEN_HIHAT][current_step];
+			int h1 = grooves[groove_idx][INST_CLOSED_HIHAT][current_step];
+			int h2 = grooves[groove_idx][INST_CLOSED_HIHAT2][current_step];
+			if (oh > 0) {
+				vel[INST_CLOSED_HIHAT] = 0;	
+				gateon[INST_CLOSED_HIHAT] = 30;
 			}
+			else if (h1 > 0 && h2 > 0) {
+				vel[INST_CLOSED_HIHAT] = 5;
+				gateon[INST_CLOSED_HIHAT] = 30;
+			}
+			else if (h2 > 0) {
+				vel[INST_CLOSED_HIHAT] = 3;
+				gateon[INST_CLOSED_HIHAT] = 30; 
+			}
+			else if (h1 > 0) {
+				vel[INST_CLOSED_HIHAT] = 1;
+				gateon[INST_CLOSED_HIHAT] = 30;
+			}
+
 			if (grooves[groove_idx][INST_KICK][current_step]) {
 				bass_gateon = 0;
 			}
@@ -637,7 +689,7 @@ struct SectionButton : Widget {
 struct GridButton : Widget {
 	GrooveBox *module = NULL;
 	int squareSize = SQUARE_SIZE; 
-	int rows = 6;
+	int rows = NUM_INST;
 	int cols = 64;
 	int mouse_row = -1;
 	int mouse_col = -1;
@@ -672,6 +724,30 @@ struct GridButton : Widget {
 		if (row >= 0 && row < rows && col >= 0 && col < cols) {
 			mouse_row = row;
 			mouse_col = col;	
+			int modkeys = APP->window->getMods();
+			if (modkeys & GLFW_MOD_SHIFT) {
+				grooves[module->groove_idx][row][col] = 0;
+        		}
+			if (glfwGetKey(APP->window->win, GLFW_KEY_2) == GLFW_PRESS) {
+				if ((col % 4) == 1) {
+					grooves[module->groove_idx][row][col] = 1;
+				}
+        		}
+			if (glfwGetKey(APP->window->win, GLFW_KEY_1) == GLFW_PRESS) {
+				if ((col % 4) == 0) {
+					grooves[module->groove_idx][row][col] = 1;
+				}
+			}
+			if (glfwGetKey(APP->window->win, GLFW_KEY_3) == GLFW_PRESS) {
+				if ((col % 4) == 2) {
+					grooves[module->groove_idx][row][col] = 1;
+				}
+			}
+			if (glfwGetKey(APP->window->win, GLFW_KEY_4) == GLFW_PRESS) {
+				if ((col % 4) == 3) {
+					grooves[module->groove_idx][row][col] = 1;
+				}
+			}
 			e.consume(this); 
 		}
 		else {
@@ -744,7 +820,6 @@ struct GrooveBoxWidget : ModuleWidget {
 		int x3 = x2 + spacingX;
 		int x4 = x3 + spacingX;
 		int x5 = x4 + spacingX;
-		int x6 = x5 + spacingX;
 
 		float y = 54;
 		addInput(createInputCentered<PJ301MPort>(Vec(x0, y), module, GrooveBox::CLOCK_INPUT));
