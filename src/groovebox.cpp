@@ -50,6 +50,7 @@ struct GrooveBox : Module {
 		VEL_OPEN_HIHAT_OUTPUT,
 		GATE_CYMBAL_OUTPUT,
 		GATE_PERC_OUTPUT,
+		GATE_SNARE_GHOST_OUTPUT,
 		NUM_OUTPUTS
 	};
 
@@ -425,6 +426,7 @@ struct GrooveBox : Module {
 
 		outputs[GATE_KICK_OUTPUT].setVoltage(amp[INST_KICK]);
 		outputs[GATE_SNARE_OUTPUT].setVoltage(amp[INST_SNARE]);
+		outputs[GATE_SNARE_GHOST_OUTPUT].setVoltage(amp[INST_SNARE_GHOST]);
 		outputs[GATE_OPEN_HIHAT_OUTPUT].setVoltage(amp[INST_OPEN_HIHAT]);
 		outputs[GATE_CLOSED_HIHAT_OUTPUT].setVoltage(amp[INST_CLOSED_HIHAT]);
 
@@ -737,6 +739,8 @@ struct GridButton : Widget {
 		}
 	}
 
+	int copy_groove_idx = 0;
+
 	void onHover(const event::Hover& e) override {
 		int row = e.pos.y / squareSize;
 		int col = e.pos.x / squareSize;
@@ -748,6 +752,19 @@ struct GridButton : Widget {
 			if (modkeys & GLFW_MOD_SHIFT) {
 				grooves[module->groove_idx][row][col] = 0;
         		}
+			if  (modkeys & GLFW_MOD_CONTROL || modkeys & GLFW_MOD_SUPER) {
+				if (glfwGetKey(APP->window->win, GLFW_KEY_C) == GLFW_PRESS) {
+					copy_groove_idx = module->groove_idx;
+				}
+				else if (glfwGetKey(APP->window->win, GLFW_KEY_V) == GLFW_PRESS) {
+					for (int i = 0; i < rows; i++) {
+						for (int j = 0; j < cols; j++) {
+							grooves[module->groove_idx][i][j] = 
+							grooves[copy_groove_idx][i][j];
+						}
+					}
+				}
+			}
 			if (glfwGetKey(APP->window->win, GLFW_KEY_2) == GLFW_PRESS) {
 				if ((col % 4) == 1) {
 					grooves[module->groove_idx][row][col] = 1;
@@ -785,6 +802,21 @@ struct GridButton : Widget {
 		if (module == NULL) return;
 		drawGrid(args.vg);
 	}
+	NVGcolor metallic2 = nvgRGBA(158, 171, 176, 255);
+	NVGcolor metallic4 = nvgRGBA(14, 35, 46, 255);
+	NVGcolor green1 = nvgRGBA(204, 255, 66, 255);
+	NVGcolor red1 = nvgRGBA(255, 65, 65, 255);
+
+	NVGcolor colors[NUM_INST] = {
+		red1,
+		red1,
+		green1,
+		green1,
+		green1,
+		metallic2,
+		metallic2,
+		red1
+	};
 
 	void drawGrid(NVGcontext* vg) {
 		NVGcolor color;
@@ -808,7 +840,8 @@ struct GridButton : Widget {
 					color = nvgRGBA(255, 255, 255, 255); 
 				}
 				else {
-					color = grooves[module->groove_idx][i][j] > 0 ? nvgRGBA(255, 0, 0, 255) : back;
+					color = grooves[module->groove_idx][i][j] > 0 ? 
+						colors[i]: back;
 				}
 
 				float x = j * squareSize;
@@ -872,6 +905,8 @@ struct GrooveBoxWidget : ModuleWidget {
 
 		y = 308;
 		addOutput(createOutputCentered<PJ301MPort>(Vec(x0, y), module, GrooveBox::GATE_SNARE_OUTPUT));
+		addOutput(createOutputCentered<PJ301MPort>(Vec(x1, y), module, GrooveBox::GATE_SNARE_GHOST_OUTPUT));
+		//addOutput(createOutputCentered<PJ301MPort>(Vec(x1, y), module, GrooveBox::VEL_SNARE_OUTPUT));
 
 		y = 344;
 		addOutput(createOutputCentered<PJ301MPort>(Vec(x0, y), module, GrooveBox::GATE_KICK_OUTPUT));
