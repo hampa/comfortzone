@@ -115,7 +115,11 @@ struct GrooveBox : Module {
 		static char path[1024]; 
 		//const char *doc = asset::user(pluginInstance->slug).c_str();
 		//mkdir(doc, 0777);
+#ifdef _WIN32
+		mkdir(asset::user(pluginInstance->slug).c_str());
+#else
 		mkdir(asset::user(pluginInstance->slug).c_str(), 0777);
+#endif
 		memset(path, 0, sizeof(path));
 		snprintf(path, sizeof(path), "%s/%s", asset::user(pluginInstance->slug).c_str(), filename);
 		return path;
@@ -699,18 +703,33 @@ struct GridButton : Widget {
 		box.size = Vec(cols * squareSize, rows * squareSize);
 	}
 
+	void setAll(int row, int col, int val) {
+		for (int i = 0; i < 64; i++) {
+			if ((i % 4) == (col % 4)) {
+				grooves[module->groove_idx][row][i] = val;
+			}
+		}
+	}
+
 	void onButton(const event::Button& e) override {
 		if (e.action == GLFW_PRESS && e.button == GLFW_MOUSE_BUTTON_LEFT) {
 			int row = e.pos.y / squareSize;
 			int col = e.pos.x / squareSize;
+			bool all =  (glfwGetKey(APP->window->win, GLFW_KEY_A) == GLFW_PRESS);
 
 			if (row >= 0 && row < rows && col >= 0 && col < cols) {
 				assert (module->groove_idx < NUM_GROOVES && module->groove_idx >= 0);
 				if (grooves[module->groove_idx][row][col] > 0) {
 					grooves[module->groove_idx][row][col] = 0;
+					if (all) {
+						setAll(row, col, 0);
+					}
 				}
 				else {
 					grooves[module->groove_idx][row][col] = 1;
+					if (all) {
+						setAll(row, col, 1);
+					}
 				}
 				e.consume(this);
 				return;
