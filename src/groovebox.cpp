@@ -148,6 +148,7 @@ struct GrooveBox : Module {
 
 	void save_header(const char* headerName) {
 		FILE *headerFile = fopen(headerName, "w");
+		DEBUG("save header to %s", headerName);
 		if (headerFile == NULL) {
 			DEBUG("Error opening file %s", strerror(errno));
 			return;
@@ -285,13 +286,14 @@ struct GrooveBox : Module {
 			current_track = track;
 		}
 
-		int save = floorf(params[SAVE_PARAM].getValue());
-		if (save && force_save == false) {
+		bool save = params[SAVE_PARAM].getValue() > 0;
+		if (save) {
 			force_save = true;
 		}
+
 		if (force_save) {
-			//save_header("/tmp/header.h");
-			save_header(get_path("gb-header.h"));
+			save_header("/tmp/header.h");
+			save_header(get_path("groove.h"));
 			export_array(get_path("db.txt"));
 			force_save = false;
 			params[SAVE_PARAM].setValue(0);
