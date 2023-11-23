@@ -60,8 +60,6 @@ struct GrooveBox : Module {
 		NUM_LIGHTS 
 	};
 
-	//const char *db = "gb.txt";
-
 	GrooveBox () {
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
 		configParam(ROOT_NOTE_PARAM, -12.0f, 12.f, 0, "Root Note", " Midi");
@@ -70,12 +68,11 @@ struct GrooveBox : Module {
 		configParam(LOOP_PARAM, 0, 1, 0, "Loop", "");
 		configInput(CLOCK_INPUT, "Clock Input");
 		configInput(RESET_INPUT, "Reset Input");
-
 		import_array(get_path("db.txt"));
-		DEBUG("path : %s", get_path("db.txt"));
 	}
 
 	~GrooveBox () {
+		save_header(get_path("gb-header.h"));
 		export_array(get_path("db.txt"));
 	}
 
@@ -290,7 +287,6 @@ struct GrooveBox : Module {
 			force_save = true;
 		}
 		if (force_save) {
-			//save_header("/tmp/header.h");
 			save_header(get_path("gb-header.h"));
 			export_array(get_path("db.txt"));
 			force_save = false;
@@ -528,11 +524,12 @@ struct BinButton : Widget {
 		return rows * squareSize;
 	}
 
-	int toggleNthBit( int num, int N) {
+	int toggleNthBit(int num, int N) {
     		return num ^ (1 << N);
 	}
 
-	bool isNthBitSet( int num, int N) {
+
+	bool isNthBitSet(int num, int N) {
     		return (num & (1 << N)) != 0;
 	}
 
@@ -627,15 +624,18 @@ struct SectionButton : Widget {
     		return (num & (1 << N)) != 0;
 	}
 
+	int setNthBit(int num, int N) {
+		return num | (1 << N);
+	}
+
 	void onButton(const event::Button& e) override {
 		if (e.action == GLFW_PRESS && e.button == GLFW_MOUSE_BUTTON_LEFT) {
 			 int row = e.pos.y / squareSize;
 			 int col = e.pos.x / squareSize;
 
 			if (row >= 0 && row < rows && col >= 0 && col < cols) {
-				 int c = tracks[module->current_track][config_idx][col];
+				int c = tracks[module->current_track][config_idx][col];
 				c = toggleNthBit(c, row);
-
 				tracks[module->current_track][config_idx][col] = c;
 
 				e.consume(this);
@@ -651,6 +651,12 @@ struct SectionButton : Widget {
 		if (row >= 0 && row < rows && col >= 0 && col < cols) {
 			mouse_row = row;
 			mouse_col = col;
+			int modkeys = APP->window->getMods();
+			if (modkeys & GLFW_MOD_SHIFT) {
+				int c = tracks[module->current_track][config_idx][col];
+				c = setNthBit(c, row);
+				tracks[module->current_track][config_idx][col] = c;
+			}
 			e.consume(this); 
 		}
 		else {
@@ -672,14 +678,29 @@ struct SectionButton : Widget {
 
 	void drawGrid(NVGcontext* vg) {
 		NVGcolor color;
-		
+		NVGcolor back;
+
 		for (int i = 0; i < rows; ++i) {
 			for (int j = 0; j < cols; ++j) {
+				if (j == module->current_step) {
+					back = nvgRGBA(100, 100, 100, 255);
+				}
+				else if (j == 32) {
+					back = nvgRGBA(50, 50, 50, 255);
+				}
+				else if ((j / 4) % 2) {
+					back = nvgRGBA(30, 30, 30, 255);
+				}
+				else {
+					back = nvgRGBA(0, 0, 0, 255);
+				}
+
 				if (mouse_row == i && mouse_col == j) {
 					color = nvgRGBA(255, 255, 255, 255); 
 				}
 				else {
-					color = isNthBitSet(tracks[module->current_track][config_idx][j], i) ? nvgRGBA(0, 255, 0, 255) : nvgRGBA(0, 0, 0, 255);
+					color = isNthBitSet(tracks[module->current_track][config_idx][j], i) ? 
+						nvgRGBA(0, 255, 0, 255) : back; 
 				}
 
 				float x = j * squareSize;
@@ -717,7 +738,7 @@ struct GridButton : Widget {
 		if (e.action == GLFW_PRESS && e.button == GLFW_MOUSE_BUTTON_LEFT) {
 			int row = e.pos.y / squareSize;
 			int col = e.pos.x / squareSize;
-			bool all =  (glfwGetKey(APP->window->win, GLFW_KEY_A) == GLFW_PRESS);
+			bool all = (glfwGetKey(APP->window->win, GLFW_KEY_A) == GLFW_PRESS);
 
 			if (row >= 0 && row < rows && col >= 0 && col < cols) {
 				assert (module->groove_idx < NUM_GROOVES && module->groove_idx >= 0);
@@ -753,10 +774,13 @@ struct GridButton : Widget {
 				grooves[module->groove_idx][row][col] = 0;
         		}
 			if  (modkeys & GLFW_MOD_CONTROL || modkeys & GLFW_MOD_SUPER) {
+				//DEBUG("mod control");
 				if (glfwGetKey(APP->window->win, GLFW_KEY_C) == GLFW_PRESS) {
 					copy_groove_idx = module->groove_idx;
+					//DEBUG("mod control copy");
 				}
 				else if (glfwGetKey(APP->window->win, GLFW_KEY_V) == GLFW_PRESS) {
+					//DEBUG("mod control paste");
 					for (int i = 0; i < rows; i++) {
 						for (int j = 0; j < cols; j++) {
 							grooves[module->groove_idx][i][j] = 
@@ -802,6 +826,7 @@ struct GridButton : Widget {
 		if (module == NULL) return;
 		drawGrid(args.vg);
 	}
+
 	NVGcolor metallic2 = nvgRGBA(158, 171, 176, 255);
 	NVGcolor metallic4 = nvgRGBA(14, 35, 46, 255);
 	NVGcolor green1 = nvgRGBA(204, 255, 66, 255);
