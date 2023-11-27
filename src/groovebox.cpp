@@ -68,7 +68,8 @@ struct GrooveBox : Module {
 		configParam(LOOP_PARAM, 0, 1, 0, "Loop", "");
 		configInput(CLOCK_INPUT, "Clock Input");
 		configInput(RESET_INPUT, "Reset Input");
-		import_array(get_path("db.txt"));
+		//import_array(get_path("db.txt"));
+		gen_groove();
 	}
 
 	~GrooveBox () {
@@ -257,6 +258,51 @@ struct GrooveBox : Module {
 	inline float fmap_log(float in, float min, float max) {
 		const float a = 1.f / log10f(max / min);
 		return CLAMP(min * powf(10, in / a), min, max);
+	}
+
+	void gen_groove() {
+		int groove = 0;
+		int melody = 0;
+		for (int i = 0; i < NUM_TRACKS; i++) {
+			for (int k = 0; k < 64; k++) {
+				tracks[i][0][k] = groove;
+				tracks[i][1][k] = melody;
+			}
+			melody++;
+			groove++;
+		}
+
+		for (int i = 0; i < NUM_TRACKS; i++) {
+			for (int k = 0; k < 64; k++) {
+				/*
+				   if ((k % 4) == 0) {
+				   grooves[i][INST_PERC][k] = 1;
+				   }
+				 */
+				if (k > 60) {
+					grooves[i][INST_SNARE][k] = 1;
+				}
+				if ((k % 8) == 4) {
+					grooves[i][INST_SNARE][k] = 1;
+				}
+				// offbeat
+				if ((k % 4) == 2) {
+					grooves[i][INST_OPEN_HIHAT][k] = 1;
+				}
+				else {
+					grooves[i][INST_CLOSED_HIHAT][k] = 1;
+				}
+				if (k > 60) {
+					grooves[i][INST_KICK][k] = 1;
+				}
+				else if ((k % 4) == 0) {
+					grooves[i][INST_KICK][k] = 1;
+				}
+				else {
+					grooves[i][INST_BASS][k] = 1;
+				} 
+			}
+		}
 	}
 
 	inline float mtof(float m) {
