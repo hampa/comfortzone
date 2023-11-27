@@ -26,6 +26,7 @@ struct GrooveBox : Module {
 		TRACK_PARAM,
 		SAVE_PARAM,
 		LOOP_PARAM,
+		LOAD_PARAM,
 		NUM_PARAMS
 	};
 
@@ -65,15 +66,16 @@ struct GrooveBox : Module {
 		configParam(ROOT_NOTE_PARAM, -12.0f, 12.f, 0, "Root Note", " Midi");
 		configParam(TRACK_PARAM, 0, NUM_TRACKS - 1, 0, "Track", "");
 		configParam(SAVE_PARAM, 0, 1, 0, "Save", "");
+		configParam(LOAD_PARAM, 0, 1, 0, "Load", "");
 		configParam(LOOP_PARAM, 0, 1, 0, "Loop", "");
 		configInput(CLOCK_INPUT, "Clock Input");
 		configInput(RESET_INPUT, "Reset Input");
-		import_array(get_path("db.txt"));
+		//import_array(get_path("db.txt"));
 	}
 
 	~GrooveBox () {
-		save_header(get_path("gb-header.h"));
-		export_array(get_path("db.txt"));
+		//save_header(get_path("gb-header.h"));
+		//export_array(get_path("db.txt"));
 	}
 
 	void onSampleRateChange(const SampleRateChangeEvent& e) override {
@@ -89,8 +91,6 @@ struct GrooveBox : Module {
 	int gateon[NUM_INST];
 	float amp[NUM_INST];
 	float vel[NUM_INST];
-	float bass_gateon = 0;
-	float bass_amp = 0;
 	float melody_gateon = 0;
 	float melody_amp = 0;
 	float bass_freq = 110;
@@ -254,6 +254,31 @@ struct GrooveBox : Module {
 		fclose(file);
 	}
 
+	void gen_groove() {
+		for (int i = 0; i < NUM_TRACKS; i++) {
+			//for (int j = 0; j < NUM_INST; j++) {
+			for (int k = 0; k < 64; k++) {
+				int x = k % 4;
+				int on = 0;
+				int j = 0;
+				if (x == 0) {
+					j = INST_SNARE;
+					on = 1;
+				}
+				else if (x == 3) {
+					j = INST_CLOSED_HIHAT;
+					on = 1;
+				}
+				else if (x == 2) {
+					j = INST_OPEN_HIHAT;
+					on = 1;
+				}
+				grooves[i][j][k] = on;
+			}
+			//}
+		}
+	}
+
 	inline float fmap_log(float in, float min, float max) {
 		const float a = 1.f / log10f(max / min);
 		return CLAMP(min * powf(10, in / a), min, max);
@@ -262,8 +287,6 @@ struct GrooveBox : Module {
 	inline float mtof(float m) {
 		return powf(2, (m - 69.0f) / 12.0f) * 440.0f;
 	}
-	bool force_load = true;
-	bool force_save = false;
 
 	void jumpToSection(int section) {
 		section_idx = section;
@@ -285,16 +308,17 @@ struct GrooveBox : Module {
 
 		bool save = params[SAVE_PARAM].getValue() > 0;
 		if (save) {
-			force_save = true;
-		}
-
-		if (force_save) {
 			//save_header(get_path("gb-header.h"));
 			//save_header("/tmp/header.h");
 			save_header(get_path("groove.h"));
 			export_array(get_path("db.txt"));
-			force_save = false;
 			params[SAVE_PARAM].setValue(0);
+		}
+
+		bool load = params[LOAD_PARAM].getValue() > 0;
+		if (load) {
+			params[LOAD_PARAM].setValue(0);
+			import_array(get_path("db.txt"));
 		}
 
 		bool have_clock = false;
@@ -323,10 +347,10 @@ struct GrooveBox : Module {
 				if (v > 0) {
 					gateon[i] = 30;
 					/*
-					if (v > 1) {
-						v /= 127.0f;
-					}	
-					*/
+					   if (v > 1) {
+					   v /= 127.0f;
+					   }	
+					   */
 					vel[i] = 5.0f;
 				}
 				else {
@@ -354,11 +378,20 @@ struct GrooveBox : Module {
 			}
 
 			if (grooves[groove_idx][INST_KICK][current_step]) {
-				bass_gateon = 0;
+				gateon[INST_BASS] = 0;
+				vel[INST_BASS] = 0;
+				osc_bass.Reset();
+			}
+			else if (grooves[groove_idx][INST_BASS][current_step]) {
+				gateon[INST_BASS] = 30;
+				vel[INST_BASS] = 1;
 			}
 			else {
-				bass_gateon = 30;
+				gateon[INST_BASS] = 0;
+				vel[INST_BASS] = 0;
+				osc_bass.Reset();
 			}
+
 			int bass_note, melody_note, melody_vel;
 			bass_note = basses[melody_idx][current_step]; 
 			melody_note = melodies[melody_idx][current_step];
@@ -397,14 +430,6 @@ struct GrooveBox : Module {
 			}
 			
 		}
-		if (bass_gateon > 1) {
-			bass_gateon--;
-			bass_amp = 5;
-		}
-		else {
-			bass_gateon = 0;
-			bass_amp = 0;
-		}
 
 		if (melody_gateon > 1) {
 			melody_gateon--;
@@ -416,9 +441,9 @@ struct GrooveBox : Module {
 		}
 
 		float melody = osc_melody.Process() * 5.0f;
-		float bass = osc_bass.Process() * 5.0f;
+		float bass = osc_bass.Process() * 5.0f * vel[INST_BASS];
 
-		outputs[GATE_BASS_OUTPUT].setVoltage(bass_amp);
+		//outputs[GATE_BASS_OUTPUT].setVoltage(bass_amp);
 		outputs[BASS_OUTPUT].setVoltage(bass);
 
 		outputs[GATE_MELODY_OUTPUT].setVoltage(melody_amp);
@@ -620,7 +645,7 @@ struct SectionButton : Widget {
 		return rows * squareSize;
 	}
 
-	 int toggleNthBit( int num, int N) {
+	int toggleNthBit( int num, int N) {
     		return num ^ (1 << N);
 	}
 
@@ -914,6 +939,7 @@ struct GrooveBoxWidget : ModuleWidget {
 		addOutput(createOutputCentered<PJ301MPort>(Vec(x0, y), module, GrooveBox::GATE_BASS_OUTPUT));
 		addOutput(createOutputCentered<PJ301MPort>(Vec(x1, y), module, GrooveBox::BASS_OUTPUT));
 		addParam(createParamCentered<RoundBlackKnob>(Vec(x3, y), module, GrooveBox::TRACK_PARAM));
+		addParam(createParamCentered<VCVButton>(Vec(x4, y), module, GrooveBox::LOAD_PARAM));
 
 		y = 126;
 		addOutput(createOutputCentered<PJ301MPort>(Vec(x0, y), module, GrooveBox::GATE_MELODY_OUTPUT));
