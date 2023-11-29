@@ -255,7 +255,7 @@ struct GrooveBox : Module {
 		fclose(file);
 	}
 
-	void gen_groove() {
+	void gen_groove_beat() {
 		for (int i = 0; i < NUM_TRACKS; i++) {
 			//for (int j = 0; j < NUM_INST; j++) {
 			for (int k = 0; k < 64; k++) {
