@@ -42,16 +42,15 @@ struct GrooveBox : Module {
 		GATE_BASS_OUTPUT,
 		BASS_OUTPUT,
 		GATE_KICK_OUTPUT,
-		VEL_KICK_OUTPUT,
-		GATE_SNARE_OUTPUT,
-		VEL_SNARE_OUTPUT,
-		GATE_CLOSED_HIHAT_OUTPUT,
-		VEL_CLOSED_HIHAT_OUTPUT,
-		GATE_OPEN_HIHAT_OUTPUT,
-		VEL_OPEN_HIHAT_OUTPUT,
-		GATE_CYMBAL_OUTPUT,
+		GATE_SNARE1_OUTPUT,
+		GATE_SNARE2_OUTPUT,
+		GATE_HIHAT_CLOSED1_OUTPUT,
+		GATE_HIHAT_CLOSED2_OUTPUT,
+		GATE_HIHAT_OPEN_OUTPUT,
+		GATE_RIDE_OUTPUT,
+		GATE_CRASH_OUTPUT,
+		GATE_CLAP_OUTPUT,
 		GATE_PERC_OUTPUT,
-		GATE_SNARE_GHOST_OUTPUT,
 		NUM_OUTPUTS
 	};
 
@@ -70,6 +69,21 @@ struct GrooveBox : Module {
 		configParam(LOOP_PARAM, 0, 1, 0, "Loop", "");
 		configInput(CLOCK_INPUT, "Clock Input");
 		configInput(RESET_INPUT, "Reset Input");
+
+		configOutput(GATE_MELODY_OUTPUT, "Melody");
+		configOutput(MELODY_OUTPUT, "Melody Voice");
+		configOutput(GATE_BASS_OUTPUT, "Bass");
+		configOutput(BASS_OUTPUT, "Bass Voice");
+		configOutput(GATE_KICK_OUTPUT, "Kick");
+		configOutput(GATE_SNARE1_OUTPUT, "Snare1");
+		configOutput(GATE_SNARE2_OUTPUT, "Snare2");
+		configOutput(GATE_HIHAT_CLOSED1_OUTPUT, "Hihat Closed1");
+		configOutput(GATE_HIHAT_CLOSED2_OUTPUT, "Hihat Closed2");
+		configOutput(GATE_HIHAT_OPEN_OUTPUT, "Hihat Open");
+		configOutput(GATE_RIDE_OUTPUT, "Ride");
+		configOutput(GATE_CRASH_OUTPUT, "Crash");
+		configOutput(GATE_CLAP_OUTPUT, "Clap");
+		configOutput(GATE_PERC_OUTPUT, "Perc");
 		//import_array(get_path("db.txt"));
 		//gen_groove();
 	}
@@ -263,15 +277,15 @@ struct GrooveBox : Module {
 				int on = 0;
 				int j = 0;
 				if (x == 0) {
-					j = INST_SNARE;
+					j = INST_SNARE1;
 					on = 1;
 				}
 				else if (x == 3) {
-					j = INST_CLOSED_HIHAT;
+					j = INST_HIHAT_CLOSED1;
 					on = 1;
 				}
 				else if (x == 2) {
-					j = INST_OPEN_HIHAT;
+					j = INST_HIHAT_OPEN;
 					on = 1;
 				}
 				grooves[i][j][k] = on;
@@ -305,17 +319,17 @@ struct GrooveBox : Module {
 				   }
 				 */
 				if (k > 60) {
-					grooves[i][INST_SNARE][k] = 1;
+					grooves[i][INST_SNARE2][k] = 1;
 				}
 				if ((k % 8) == 4) {
-					grooves[i][INST_SNARE][k] = 1;
+					grooves[i][INST_SNARE1][k] = 1;
 				}
 				// offbeat
 				if ((k % 4) == 2) {
-					grooves[i][INST_OPEN_HIHAT][k] = 1;
+					grooves[i][INST_HIHAT_OPEN][k] = 1;
 				}
 				else {
-					grooves[i][INST_CLOSED_HIHAT][k] = 1;
+					grooves[i][INST_HIHAT_CLOSED1][k] = 1;
 				}
 				if (k > 60) {
 					grooves[i][INST_KICK][k] = 1;
@@ -403,6 +417,7 @@ struct GrooveBox : Module {
 					gateon[i] = 0;
 				}
 			}
+			/*
 			int oh = grooves[groove_idx][INST_OPEN_HIHAT][current_step];
 			int h1 = grooves[groove_idx][INST_CLOSED_HIHAT][current_step];
 			int h2 = grooves[groove_idx][INST_CLOSED_HIHAT2][current_step];
@@ -422,6 +437,7 @@ struct GrooveBox : Module {
 				vel[INST_CLOSED_HIHAT] = 1;
 				gateon[INST_CLOSED_HIHAT] = 30;
 			}
+			*/
 
 			if (grooves[groove_idx][INST_KICK][current_step]) {
 				gateon[INST_BASS] = 0;
@@ -489,24 +505,22 @@ struct GrooveBox : Module {
 		float melody = osc_melody.Process() * 5.0f;
 		float bass = osc_bass.Process() * 5.0f * vel[INST_BASS];
 
-		//outputs[GATE_BASS_OUTPUT].setVoltage(bass_amp);
 		outputs[BASS_OUTPUT].setVoltage(bass);
 
 		outputs[GATE_MELODY_OUTPUT].setVoltage(melody_amp);
 		outputs[MELODY_OUTPUT].setVoltage(melody);
 
 		outputs[GATE_KICK_OUTPUT].setVoltage(amp[INST_KICK]);
-		outputs[GATE_SNARE_OUTPUT].setVoltage(amp[INST_SNARE]);
-		outputs[GATE_SNARE_GHOST_OUTPUT].setVoltage(amp[INST_SNARE_GHOST]);
-		outputs[GATE_OPEN_HIHAT_OUTPUT].setVoltage(amp[INST_OPEN_HIHAT]);
-		outputs[GATE_CLOSED_HIHAT_OUTPUT].setVoltage(amp[INST_CLOSED_HIHAT]);
+		outputs[GATE_SNARE1_OUTPUT].setVoltage(amp[INST_SNARE1]);
+		outputs[GATE_SNARE2_OUTPUT].setVoltage(amp[INST_SNARE2]);
 
-		outputs[VEL_KICK_OUTPUT].setVoltage(vel[INST_KICK]);
-		outputs[VEL_SNARE_OUTPUT].setVoltage(vel[INST_SNARE]);
-		outputs[VEL_OPEN_HIHAT_OUTPUT].setVoltage(vel[INST_OPEN_HIHAT]);
-		outputs[VEL_CLOSED_HIHAT_OUTPUT].setVoltage(vel[INST_CLOSED_HIHAT]);
+		outputs[GATE_HIHAT_CLOSED1_OUTPUT].setVoltage(amp[INST_HIHAT_CLOSED1]);
+		outputs[GATE_HIHAT_CLOSED2_OUTPUT].setVoltage(amp[INST_HIHAT_CLOSED2]);
+		outputs[GATE_HIHAT_OPEN_OUTPUT].setVoltage(amp[INST_HIHAT_OPEN]);
 
-		outputs[GATE_CYMBAL_OUTPUT].setVoltage(amp[INST_CYMBAL]);
+		outputs[GATE_RIDE_OUTPUT].setVoltage(amp[INST_RIDE]);
+		outputs[GATE_CRASH_OUTPUT].setVoltage(amp[INST_CRASH]);
+		outputs[GATE_CLAP_OUTPUT].setVoltage(amp[INST_CLAP]);
 		outputs[GATE_PERC_OUTPUT].setVoltage(amp[INST_PERC]);
 		
 		prev_clock_input = clock_input;
@@ -1019,22 +1033,23 @@ struct GrooveBoxWidget : ModuleWidget {
 		addOutput(createOutputCentered<PJ301MPort>(Vec(x1, y), module, GrooveBox::MELODY_OUTPUT));
 
 		y = 164;
-		addOutput(createOutputCentered<PJ301MPort>(Vec(x0, y), module, GrooveBox::GATE_PERC_OUTPUT));
+		addOutput(createOutputCentered<PJ301MPort>(Vec(x0, y), module, GrooveBox::GATE_CLAP_OUTPUT));
+		addOutput(createOutputCentered<PJ301MPort>(Vec(x1, y), module, GrooveBox::GATE_PERC_OUTPUT));
 
 		y = 200;
-		addOutput(createOutputCentered<PJ301MPort>(Vec(x0, y), module, GrooveBox::GATE_CYMBAL_OUTPUT));
+		addOutput(createOutputCentered<PJ301MPort>(Vec(x0, y), module, GrooveBox::GATE_RIDE_OUTPUT));
+		addOutput(createOutputCentered<PJ301MPort>(Vec(x1, y), module, GrooveBox::GATE_CRASH_OUTPUT));
 
 		y = 236; 
-		addOutput(createOutputCentered<PJ301MPort>(Vec(x0, y), module, GrooveBox::GATE_OPEN_HIHAT_OUTPUT));
+		addOutput(createOutputCentered<PJ301MPort>(Vec(x0, y), module, GrooveBox::GATE_HIHAT_OPEN_OUTPUT));
 
 		y = 272;
-		addOutput(createOutputCentered<PJ301MPort>(Vec(x0, y), module, GrooveBox::GATE_CLOSED_HIHAT_OUTPUT));
-		addOutput(createOutputCentered<PJ301MPort>(Vec(x1, y), module, GrooveBox::VEL_CLOSED_HIHAT_OUTPUT));
+		addOutput(createOutputCentered<PJ301MPort>(Vec(x0, y), module, GrooveBox::GATE_HIHAT_CLOSED1_OUTPUT));
+		addOutput(createOutputCentered<PJ301MPort>(Vec(x1, y), module, GrooveBox::GATE_HIHAT_CLOSED2_OUTPUT));
 
 		y = 308;
-		addOutput(createOutputCentered<PJ301MPort>(Vec(x0, y), module, GrooveBox::GATE_SNARE_OUTPUT));
-		addOutput(createOutputCentered<PJ301MPort>(Vec(x1, y), module, GrooveBox::GATE_SNARE_GHOST_OUTPUT));
-		//addOutput(createOutputCentered<PJ301MPort>(Vec(x1, y), module, GrooveBox::VEL_SNARE_OUTPUT));
+		addOutput(createOutputCentered<PJ301MPort>(Vec(x0, y), module, GrooveBox::GATE_SNARE1_OUTPUT));
+		addOutput(createOutputCentered<PJ301MPort>(Vec(x1, y), module, GrooveBox::GATE_SNARE2_OUTPUT));
 
 		y = 344;
 		addOutput(createOutputCentered<PJ301MPort>(Vec(x0, y), module, GrooveBox::GATE_KICK_OUTPUT));

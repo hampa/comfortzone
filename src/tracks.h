@@ -68,6 +68,17 @@
  float bas16[64] = {0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,3,3,3,3,3,3,3,3,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,3,3,3,3,3,3,3,3,1,1,1,1,1,1,1,1};
  float mel16[64] = {0,0,0,-4,-5,0,0,0,0,0,0,0,-4,-5,-5,-4,0,0,0,-4,-5,0,0,0,0,0,0,0,-4,-5,-5,-4,0,0,0,-4,-5,0,0,0,0,0,0,0,-4,-5,-5,-4,0,0,0,-4,-5,0,0,0,0,0,0,0,-4,-5,-5,-4};
 
+
+float mel17[64] = {
+8,-5,0,0, 12,0,0,0, 	0,0,0,8,   	-5,0,0,0,	10,0,7,7,    13,12,0,7,		0,0,0,13, 0,12,0,0,
+8,-5,0,0, 12,0,0,0, 	0,0,0,8,   	-5,0,0,0,	10,0,7,7,    13,12,0,7,		0,0,0,13, 0,12,0,0 };
+float vol17[64] = {
+1,1,1,1, 1,1,0,1, 	0,1,1,1, 	1,0,1,1,   	1,1,1,1,     1,1,0,1, 		0,1,1,1, 1,1,1,1,   
+1,1,1,1, 1,1,0,1, 	0,1,1,1, 	1,0,1,1,   	1,1,1,1,     1,1,0,1, 		0,1,1,1, 1,1,1,1
+};
+
+float bas17[64] = {0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,    0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,    0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,    0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0 };
+
 /*
 #define NUM_TRACKS 8
  float *volume_a[NUM_TRACKS] = { vol1, vol2, vol3, vol4, vol5, vol6, vol7, vol8 };
@@ -83,9 +94,9 @@ float **melody_x[2] =  { &melody_a[0], &melody_b[0] };
 */
 
 #define NUM_MELODIES 16
-float *melodies[NUM_MELODIES] = { mel1, mel2, mel3, mel4, mel5, mel6, mel7, mel8, mel9, mel10, mel11, mel12, mel13, mel14, mel15, mel16 };
-float *basses[NUM_MELODIES] = { bas1, bas2, bas3, bas4, bas5, bas6, bas7, bas8, bas9, bas10, bas11, bas12, bas13, bas14, bas15, bas16 };
-float *volumes[NUM_MELODIES] = { vol1, vol2, vol3, vol4, vol5, vol6, vol7, vol8, vol9, vol10, vol11, vol12, vol13, vol14, vol15, vol16 };
+float *melodies[NUM_MELODIES] = { mel1, mel2, mel3, mel4, mel5, mel6, mel7, mel8, mel9, mel10, mel11, mel12, mel13, mel14, mel15, mel17 };
+float *basses[NUM_MELODIES] = { bas1, bas2, bas3, bas4, bas5, bas6, bas7, bas8, bas9, bas10, bas11, bas12, bas13, bas14, bas15, bas17 };
+float *volumes[NUM_MELODIES] = { vol1, vol2, vol3, vol4, vol5, vol6, vol7, vol8, vol9, vol10, vol11, vol12, vol13, vol14, vol15, vol17 };
 
 /*
 int main() {
