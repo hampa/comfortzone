@@ -285,7 +285,7 @@ struct GrooveBox : Module {
 		return CLAMP(min * powf(10, in / a), min, max);
 	}
 
-	void gen_groove() {
+	void gen_groove_melody() {
 		int groove = 0;
 		int melody = 0;
 		for (int i = 0; i < NUM_TRACKS; i++) {
@@ -375,7 +375,7 @@ struct GrooveBox : Module {
 				current_step = 0;
 				if (is_looping == false) {
 					section_idx++;
-					if (section_idx > 64) {
+					if (section_idx >= 64) {
 						section_idx = 0;
 					}
 				}
@@ -751,12 +751,29 @@ struct SectionButton : Widget {
 		drawGrid(args.vg);
 	}
 
+	bool show_doubles = true;
+
 	void drawGrid(NVGcontext* vg) {
 		NVGcolor color;
 		NVGcolor back;
 
-		for (int i = 0; i < rows; ++i) {
-			for (int j = 0; j < cols; ++j) {
+		int melodies[NUM_MELODIES];
+		if (show_doubles) {
+			for (int i = 0; i < NUM_MELODIES; i++) {
+				melodies[i] = 0;
+			}
+			for (int i = 0; i < module->current_track; i++) {
+				//if (i == module->current_track) continue;
+				for (int j = 0; j < cols; ++j) {
+					int m = tracks[i][config_idx][j];
+					melodies[m]++;
+				}
+			}
+		}
+
+		for (int j = 0; j < cols; ++j) {
+			int m = tracks[module->current_track][config_idx][j];
+			for (int i = 0; i < rows; ++i) {
 				if (j == module->current_step) {
 					back = nvgRGBA(100, 100, 100, 255);
 				}
@@ -774,8 +791,18 @@ struct SectionButton : Widget {
 					color = nvgRGBA(255, 255, 255, 255); 
 				}
 				else {
-					color = isNthBitSet(tracks[module->current_track][config_idx][j], i) ? 
-						nvgRGBA(0, 255, 0, 255) : back; 
+					//color = isNthBitSet(tracks[module->current_track][config_idx][j], i) ? 
+					if (isNthBitSet(m, i)) {
+						if (melodies[m] == 0) {
+							color = nvgRGBA(0, 255, 0, 255);
+						}
+						else {
+							color = nvgRGBA(255, 200, 0, 255);
+						}
+					}
+					else {
+						color = back;
+					}
 				}
 
 				float x = j * squareSize;
@@ -1023,12 +1050,14 @@ struct GrooveBoxWidget : ModuleWidget {
         	SectionButton *melodyButton = createWidget<SectionButton>(Vec(x, y));
 		melodyButton->module = module;
 		melodyButton->config_idx = 1;
+		melodyButton->show_doubles = true;
         	addChild(melodyButton);
 
 		y += melodyButton->getHeight() + 10;
 
         	SectionButton *sectionButton = createWidget<SectionButton>(Vec(x, y));
 		sectionButton->module = module;
+		sectionButton->show_doubles = true;
         	addChild(sectionButton);
 
 		y += sectionButton->getHeight() + 10;
