@@ -165,12 +165,14 @@ struct GrooveBox : Module {
 			DEBUG("Error opening file %s", strerror(errno));
 			return;
 		}
+		/*
 		fprintf(headerFile, "#define NUM_TRACKS %i\n", NUM_TRACKS);
 		fprintf(headerFile, "#define NUM_TRACK_SETTINGS %i\n", NUM_TRACK_SETTINGS);
 		fprintf(headerFile, "#define NUM_GROOVES %i\n", NUM_GROOVES);
 		fprintf(headerFile, "#define NUM_INST %i\n\n", NUM_INST);
+		*/
 
-		fprintf(headerFile, "int tracks[NUM_TRACKS][NUM_TRACK_SETTINGS][64] = {\n");
+		fprintf(headerFile, "char tracks[NUM_TRACKS][NUM_TRACK_SETTINGS][64] = {\n");
 		for (int i = 0; i < NUM_TRACKS; i++) {
 			fprintf(headerFile, "    {\n");
 			for (int j = 0; j < NUM_TRACK_SETTINGS; j++) {
@@ -178,7 +180,7 @@ struct GrooveBox : Module {
 				for (int k = 0; k < 64; k++) {
 					//int val = tracks[i][j][k];
 					fprintf(headerFile, "%i", tracks[i][j][k]); 
-					if (k < 63) fprintf(headerFile, ", ");
+					if (k < 63) fprintf(headerFile, ",");
 				}
 				fprintf(headerFile, "}%s\n", j < NUM_INST - 1 ? "," : "");
 			}
@@ -186,25 +188,19 @@ struct GrooveBox : Module {
 		}
 		fprintf(headerFile, "};\n\n");
 
-		fprintf(headerFile, "float grooves[NUM_GROOVES][NUM_INST][64] = {\n");
+		fprintf(headerFile, "char grooves[NUM_GROOVES][NUM_INST][64] = {\n");
 
 		for (int i = 0; i < NUM_GROOVES; i++) {
-			fprintf(headerFile, "    {\n");
+			fprintf(headerFile, "{\n");
 			for (int j = 0; j < NUM_INST; j++) {
-				fprintf(headerFile, "        {");
+				fprintf(headerFile, " {");
 				for (int k = 0; k < 64; k++) {
-					float val = grooves[i][j][k];
-					if (val == 0) {
-						fprintf(headerFile, "0"); 
-					}
-					else {
-						fprintf(headerFile, "%.0f", val); 
-					}
-					if (k < 63) fprintf(headerFile, ", ");
+					fprintf(headerFile, "%i", grooves[i][j][k]); 
+					if (k < 63) fprintf(headerFile, ",");
 				}
 				fprintf(headerFile, "}%s\n", j < NUM_INST - 1 ? "," : "");
 			}
-			fprintf(headerFile, "    }%s\n", i < 7 ? "," : "");
+			fprintf(headerFile, "}%s\n", i < NUM_GROOVES - 1 ? "," : "");
 		}
 
 		fprintf(headerFile, "};\n");
@@ -230,7 +226,7 @@ struct GrooveBox : Module {
 		for (int i = 0; i < NUM_GROOVES; i++) {
 			for (int j = 0; j < NUM_INST; j++) {
 				for (int k = 0; k < 64; k++) {
-					fprintf(file, "%.0f ", grooves[i][j][k]);
+					fprintf(file, "%i ", grooves[i][j][k]);
 				}
 				fprintf(file, "\n");
 			}
@@ -244,12 +240,13 @@ struct GrooveBox : Module {
 			DEBUG("Error opening file %s", strerror(errno));
 			return;
 		}
+		DEBUG("import array %s", filename);
 
 		for (int i = 0; i < NUM_TRACKS; i++) {
 			for (int j = 0; j < NUM_TRACK_SETTINGS; j++) {
 				for (int k = 0; k < 64; k++) {
 					if (fscanf(file, "%i", &tracks[i][j][k]) != 1) {
-						fprintf(stderr, "Error reading value at [%d][%d][%d]\n", i, j, k);
+						DEBUG("Error reading value at [%i][%i][%i]\n", i, j, k);
 					}
 				}
 			}
@@ -258,10 +255,16 @@ struct GrooveBox : Module {
 		for (int i = 0; i < NUM_GROOVES; i++) {
 			for (int j = 0; j < NUM_INST; j++) {
 				for (int k = 0; k < 64; k++) {
-					if (fscanf(file, "%f", &grooves[i][j][k]) != 1) {
-						fprintf(stderr, "Error reading value at [%d][%d][%d]\n", i, j, k);
+					if (fscanf(file, "%i", &grooves[i][j][k]) != 1) {
+						DEBUG("Error reading value at [%i][%i][%i]\n", i, j, k);
 						fclose(file);
 						return;
+					}
+					else {
+						DEBUG("value at [%i][%i][%i] = %i\n", 
+							i, j, k,
+							grooves[i][j][k]);
+
 					}
 				}
 			}
