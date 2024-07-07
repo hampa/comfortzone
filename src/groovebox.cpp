@@ -1,4 +1,5 @@
 #include "plugin.hpp"
+#define WITH_BASS 1
 #include "grooves.h"
 #include "oscillator.h"
 #include <errno.h>
@@ -85,7 +86,7 @@ struct GrooveBox : Module {
 		configOutput(GATE_CLAP_OUTPUT, "Clap");
 		configOutput(GATE_PERC_OUTPUT, "Perc");
 		//import_array(get_path("db.txt"));
-		//gen_groove();
+		//gen_groove_beat();
 	}
 
 	~GrooveBox () {
@@ -160,7 +161,7 @@ struct GrooveBox : Module {
 
 	void save_header(const char* headerName) {
 		FILE *headerFile = fopen(headerName, "w");
-		DEBUG("save header to %s", headerName);
+		DEBUG("save header to the file %s", headerName);
 		if (headerFile == NULL) {
 			DEBUG("Error opening file %s", strerror(errno));
 			return;
@@ -174,6 +175,7 @@ struct GrooveBox : Module {
 
 		fprintf(headerFile, "char tracks[NUM_TRACKS][NUM_TRACK_SETTINGS][64] = {\n");
 		for (int i = 0; i < NUM_TRACKS; i++) {
+			fprintf(headerFile, "//track: %i\n", i);
 			fprintf(headerFile, "    {\n");
 			for (int j = 0; j < NUM_TRACK_SETTINGS; j++) {
 				fprintf(headerFile, "        {");
@@ -191,6 +193,7 @@ struct GrooveBox : Module {
 		fprintf(headerFile, "char grooves[NUM_GROOVES][NUM_INST][64] = {\n");
 
 		for (int i = 0; i < NUM_GROOVES; i++) {
+			fprintf(headerFile, "//groove: %i\n", i);
 			fprintf(headerFile, "{\n");
 			for (int j = 0; j < NUM_INST; j++) {
 				fprintf(headerFile, " {");
@@ -198,7 +201,8 @@ struct GrooveBox : Module {
 					fprintf(headerFile, "%i", grooves[i][j][k]); 
 					if (k < 63) fprintf(headerFile, ",");
 				}
-				fprintf(headerFile, "}%s\n", j < NUM_INST - 1 ? "," : "");
+				fprintf(headerFile, "}%s", j < NUM_INST - 1 ? "," : "");
+				fprintf(headerFile, "//%s\n", inst[j]);
 			}
 			fprintf(headerFile, "}%s\n", i < NUM_GROOVES - 1 ? "," : "");
 		}
@@ -271,12 +275,65 @@ struct GrooveBox : Module {
 		}
 		fclose(file);
 	}
+	enum {
+		GRV_SILENT,
+		GRV_KBBB,
+		GRV_HIHAT,
+		GRV_BASS
+	};
 
 	void gen_groove_beat() {
+		int bar[64] = {
+		0,0,0,0,
+
+		1,1,1,1, // just kbbb, LEVEL 0
+		2,2,2,2, // hihat, LEVEL 1
+		2,2,2,2, // hihat
+		2,2,2,2, // hihat 
+
+		3,3,3,3, // bass with notes, LEVEL 2
+		3,3,3,3, // bass with notes
+		3,3,3,3, // bass with notes
+		1,1,1,1, // just kbb 
+
+		3,3,3,3, // bass with notes
+		3,3,3,3, // bass with notes
+		3,3,3,3, // bass with
+		1,1,1,1, // just kicks
+
+		3,3,3,3, // bass with notes
+		1,1,1,1, // just kbb , LEVEL 2
+		0,0,0,0
+		};
+
+		/*	
+        	for (int i = 1; i < NUM_GROOVES; i += 4) {
+               		grooves[i][INST_KICK] = 1;
+		}
+		*/
+		
 		for (int i = 0; i < NUM_TRACKS; i++) {
 			//for (int j = 0; j < NUM_INST; j++) {
 			for (int k = 0; k < 64; k++) {
+				int g = bar[k];	
+				if (i > 4 && g != 0) {
+					g += 4;
+				} 
+				tracks[i][TRACK_SETTING_GROOVE][k] = g; 
 				int x = k % 4;
+				if (x == 3 && k > 4 && k < 63) {
+					tracks[i][TRACK_SETTING_GROOVE][k] += 8;
+				}
+				//switch (bar[k]) {
+				/*
+				case GRV_SILENT:
+					grooves[i][j][k] = 0;
+					break;
+				case GRV_KBBB:
+					if (x == 0) {
+					break;
+				*/
+				/*
 				int on = 0;
 				int j = 0;
 				if (x == 0) {
@@ -292,6 +349,7 @@ struct GrooveBox : Module {
 					on = 1;
 				}
 				grooves[i][j][k] = on;
+				*/
 			}
 			//}
 		}
@@ -373,7 +431,7 @@ struct GrooveBox : Module {
 		if (save) {
 			//save_header(get_path("gb-header.h"));
 			//save_header("/tmp/header.h");
-			save_header(get_path("groove.h"));
+			save_header(get_path("groove2.h"));
 			export_array(get_path("db.txt"));
 			params[SAVE_PARAM].setValue(0);
 		}
@@ -382,6 +440,7 @@ struct GrooveBox : Module {
 		if (load) {
 			params[LOAD_PARAM].setValue(0);
 			import_array(get_path("db.txt"));
+			gen_groove_beat();
 		}
 
 		bool have_clock = false;
@@ -1003,7 +1062,7 @@ struct GridButton : Widget {
 
 
 struct GrooveBoxWidget : ModuleWidget {
-	Label* labelPitch;
+	Label* labelInfo;
 
 	GrooveBoxWidget(GrooveBox* module) {
 		setModule(module);
@@ -1063,6 +1122,12 @@ struct GrooveBoxWidget : ModuleWidget {
 		jumpButton->module = module;
         	addChild(jumpButton);
 
+		labelInfo = createWidget<Label>(Vec(200, 40));
+		labelInfo->box.size = Vec(500, 20);
+		labelInfo->text = "Testing a long string";
+		labelInfo->color = metallic4;
+		addChild(labelInfo);
+
 		y += jumpButton->getHeight() + 10;
 
         	SectionButton *melodyButton = createWidget<SectionButton>(Vec(x, y));
@@ -1088,11 +1153,6 @@ struct GrooveBoxWidget : ModuleWidget {
 		gridButton->module = module;
         	addChild(gridButton);
 
-		//labelPitch = createWidget<Label>(Vec(5, 90));
-		//labelPitch->box.size = Vec(50, 50);
-		//labelPitch->text = "#F";
-		//labelPitch->color = metallic4;
-		//addChild(labelPitch);
 	}
 
 	// color scheme Echo Icon Theme Palette in Inkscape
@@ -1101,13 +1161,15 @@ struct GrooveBoxWidget : ModuleWidget {
 	NVGcolor green1 = nvgRGBA(204, 255, 66, 255);
 	NVGcolor red1 = nvgRGBA(255, 65, 65, 255);
 
-	/*
 	void step() override {
 		GrooveBox * module = dynamic_cast<GrooveBox*>(this->module);
 		ModuleWidget::step();
-
+		char buf[256];
+		if (module) {
+			snprintf(buf, sizeof(buf), "g: %i m: %i", module->groove_idx, module->melody_idx);
+			labelInfo->text = buf;
+		}
 	}
-	*/
 };
 
 Model* modelGrooveBox = createModel<GrooveBox, GrooveBoxWidget>("groovebox");

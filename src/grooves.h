@@ -17,11 +17,21 @@ enum {
 	NUM_INST
 };
 
+const char *inst[] = {"perc", "clap", "crash", "ride", "OHH", "HH2", "HH1", "snare2", "snare1", "bass", "kick", "none"};
+
 #define NUM_GROOVES 16 
 #define NUM_TRACKS 8
 #define NUM_TRACK_SETTINGS 2
+#define TRACK_SETTING_GROOVE 0
+#define TRACK_SETTING_MELODY 1
 
+
+//#define WITH_STATIC 0
+//#ifdef WITH_STATIC 
+//#include "groove_static.h"
+//#else
 int tracks[NUM_TRACKS][NUM_TRACK_SETTINGS][64];
 int grooves[NUM_GROOVES][NUM_INST][64];
+//#endif
 
 #endif
