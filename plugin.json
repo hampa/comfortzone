@@ -72,6 +72,12 @@
 			"name": "GrooveBox",
 			"description": "Groove Box",
 			"tags": ["Sequencer"]
+		},
+		{
+			"slug": "formants",
+			"name": "Formants",
+			"description": "Formant Oscillator",
+			"tags": ["Oscillator"]
 		}
 	]
 }
